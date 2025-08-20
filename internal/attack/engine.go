@@ -9,29 +9,37 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/owaspchecker/internal/checks"
 	"github.com/owaspchecker/internal/common"
 	"github.com/owaspchecker/internal/httpx"
 	"github.com/owaspchecker/internal/mutate"
+	"github.com/schollz/progressbar/v3"
 )
 
 // Engine handles the attack execution
 type Engine struct {
-	client      *httpx.Client
-	mutator     *mutate.Mutator
-	checker     *checks.Checker
-	store       httpx.RequestStore
-	concurrency int
+	client       *httpx.Client
+	mutator      *mutate.Mutator
+	checker      *checks.Checker
+	store        httpx.RequestStore
+	concurrency  int
+	delay        time.Duration
+	burst        int
+	requestCount int64
+	delayMutex   sync.Mutex
 }
 
 // NewEngine creates a new attack engine
-func NewEngine(client *httpx.Client, store httpx.RequestStore, concurrency int) *Engine {
+func NewEngine(client *httpx.Client, store httpx.RequestStore, concurrency int, delay int, burst int) *Engine {
 	return &Engine{
 		client:      client,
 		mutator:     mutate.NewMutator(),
 		checker:     checks.NewChecker(),
 		store:       store,
 		concurrency: concurrency,
+		delay:       time.Duration(delay) * time.Millisecond,
+		burst:       burst,
 	}
 }
 
@@ -47,6 +55,11 @@ type AttackResult struct {
 
 // Attack executes attacks on the provided requests
 func (e *Engine) Attack(requests []common.RecordedRequest) (*AttackResult, error) {
+	return e.AttackWithProgress(requests, nil)
+}
+
+// AttackWithProgress executes attacks with progress tracking
+func (e *Engine) AttackWithProgress(requests []common.RecordedRequest, bar *progressbar.ProgressBar) (*AttackResult, error) {
 	startTime := time.Now()
 
 	var allMutatedRequests []common.RecordedRequest
@@ -78,11 +91,21 @@ func (e *Engine) Attack(requests []common.RecordedRequest) (*AttackResult, error
 		close(resultChan)
 	}()
 
-	// Process results
+	// Process results with progress
+	processedCount := 0
 	for result := range resultChan {
 		allMutatedRequests = append(allMutatedRequests, result.mutatedRequests...)
 		allResponses = append(allResponses, result.responses...)
 		allFindings = append(allFindings, result.findings...)
+
+		processedCount++
+		if bar != nil {
+			bar.Add(1)
+		}
+	}
+
+	if bar != nil {
+		bar.Finish()
 	}
 
 	endTime := time.Now()
@@ -109,8 +132,27 @@ func (e *Engine) worker(wg *sync.WaitGroup, requestChan <-chan common.RecordedRe
 	defer wg.Done()
 
 	for req := range requestChan {
+		// Check if we need to apply delay
+		e.checkAndApplyDelay()
+
 		result := e.attackRequest(&req)
 		resultChan <- result
+	}
+}
+
+// checkAndApplyDelay checks if delay should be applied and applies it
+func (e *Engine) checkAndApplyDelay() {
+	if e.delay <= 0 || e.burst <= 0 {
+		return
+	}
+
+	e.delayMutex.Lock()
+	defer e.delayMutex.Unlock()
+
+	e.requestCount++
+	if e.requestCount%int64(e.burst) == 0 {
+		fmt.Printf("Applied delay of %v after %d requests\n", e.delay, e.burst)
+		time.Sleep(e.delay)
 	}
 }
 
@@ -168,7 +210,20 @@ func (e *Engine) sendRequest(req *common.RecordedRequest) (*common.RecordedRespo
 	// Create HTTP request
 	httpReq, err := http.NewRequest(req.Method, req.URL, strings.NewReader(req.Body))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		// Create error response
+		duration := time.Since(time.Now()) // This will be very small
+		return &common.RecordedResponse{
+			ID:          generateID(),
+			RequestID:   req.ID,
+			StatusCode:  0,
+			Headers:     make(map[string]string),
+			Body:        fmt.Sprintf("Request creation failed: %v", err),
+			ContentType: "text/plain",
+			Size:        0,
+			Duration:    duration,
+			Timestamp:   time.Now(),
+			Hash:        "",
+		}, nil
 	}
 
 	// Add headers
@@ -176,18 +231,50 @@ func (e *Engine) sendRequest(req *common.RecordedRequest) (*common.RecordedRespo
 		httpReq.Header.Set(key, value)
 	}
 
+	// Record start time for accurate duration measurement
+	startTime := time.Now()
+
 	// Send request using our HTTP client
 	resp, err := e.client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		// Create error response with duration
+		duration := time.Since(startTime)
+		return &common.RecordedResponse{
+			ID:          generateID(),
+			RequestID:   req.ID,
+			StatusCode:  0,
+			Headers:     make(map[string]string),
+			Body:        fmt.Sprintf("Request failed: %v", err),
+			ContentType: "text/plain",
+			Size:        0,
+			Duration:    duration,
+			Timestamp:   time.Now(),
+			Hash:        "",
+		}, nil
 	}
 	defer resp.Body.Close()
 
 	// Read response body
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+		// Create error response with duration
+		duration := time.Since(startTime)
+		return &common.RecordedResponse{
+			ID:          generateID(),
+			RequestID:   req.ID,
+			StatusCode:  resp.StatusCode,
+			Headers:     headersToMap(resp.Header),
+			Body:        fmt.Sprintf("Failed to read response body: %v", err),
+			ContentType: resp.Header.Get("Content-Type"),
+			Size:        0,
+			Duration:    duration,
+			Timestamp:   time.Now(),
+			Hash:        "",
+		}, nil
 	}
+
+	// Calculate actual duration
+	duration := time.Since(startTime)
 
 	// Create recorded response
 	recordedResp := &common.RecordedResponse{
@@ -198,7 +285,7 @@ func (e *Engine) sendRequest(req *common.RecordedRequest) (*common.RecordedRespo
 		Body:        string(bodyBytes),
 		ContentType: resp.Header.Get("Content-Type"),
 		Size:        int64(len(bodyBytes)),
-		Duration:    time.Since(req.Timestamp),
+		Duration:    duration,
 		Timestamp:   time.Now(),
 		Hash:        generateHash(bodyBytes),
 	}
@@ -219,7 +306,7 @@ func headersToMap(header http.Header) map[string]string {
 
 // generateID generates a unique ID
 func generateID() string {
-	return fmt.Sprintf("%d_%d", time.Now().UnixNano(), time.Now().UnixNano()%1000)
+	return uuid.New().String()
 }
 
 // generateHash generates SHA256 hash of data

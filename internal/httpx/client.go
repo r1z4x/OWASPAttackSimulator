@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/owaspchecker/internal/common"
 )
 
@@ -36,7 +37,7 @@ func NewClient(store RequestStore) *Client {
 // Do executes an HTTP request and logs both request and response
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	startTime := time.Now()
-	
+
 	// Record the request
 	recordedReq := &common.RecordedRequest{
 		ID:          generateID(),
@@ -114,7 +115,7 @@ func headersToMap(header http.Header) map[string]string {
 
 // generateID generates a unique ID for requests/responses
 func generateID() string {
-	return fmt.Sprintf("%d_%d", time.Now().UnixNano(), time.Now().UnixNano()%1000)
+	return uuid.New().String()
 }
 
 // generateHash generates SHA256 hash of data

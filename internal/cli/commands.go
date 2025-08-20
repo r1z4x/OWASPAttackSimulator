@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
+	"github.com/fatih/color"
+	"github.com/google/uuid"
 	"github.com/owaspchecker/internal/attack"
 	"github.com/owaspchecker/internal/common"
 	"github.com/owaspchecker/internal/crawl"
@@ -12,6 +16,7 @@ import (
 	"github.com/owaspchecker/internal/httpx"
 	"github.com/owaspchecker/internal/report"
 	"github.com/owaspchecker/internal/store"
+	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 )
 
@@ -44,77 +49,121 @@ func NewCommands() *Commands {
 // setupCommands sets up all CLI commands
 func (c *Commands) setupCommands() {
 	c.rootCmd = &cobra.Command{
-		Use:   "owaspchecker",
+		Use:   "owaspchecker [URL or requests-file]",
 		Short: "OWASP Top 10 Web Application Security Scanner",
 		Long: `OWASPChecker is a comprehensive web application security scanner 
-that focuses on OWASP Top 10 vulnerabilities. It can crawl websites, 
-load requests from HAR/JSON files, and perform automated security testing.`,
+that focuses on OWASP Top 10 vulnerabilities.
+
+Usage:
+  owaspchecker <URL>                    # Attack a website directly
+  owaspchecker <requests-file>          # Attack requests from HAR/JSON file
+  owaspchecker --help                   # Show help
+
+Examples:
+  owaspchecker https://example.com
+  owaspchecker requests.har
+  owaspchecker requests.json`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: c.runMain,
 	}
 
-	// Add subcommands
-	c.rootCmd.AddCommand(c.crawlCmd())
-	c.rootCmd.AddCommand(c.attackCmd())
-	c.rootCmd.AddCommand(c.reportCmd())
+	// Add flags
+	c.rootCmd.Flags().IntP("depth", "d", 3, "Maximum crawl depth (only for URL)")
+	c.rootCmd.Flags().IntP("concurrency", "c", 10, "Number of concurrent requests")
+	c.rootCmd.Flags().StringP("format", "f", "html", "Report format (html, json)")
+	c.rootCmd.Flags().BoolP("crawl-only", "", false, "Only crawl, don't attack")
+	c.rootCmd.Flags().BoolP("attack-only", "", false, "Only attack, don't crawl")
+	c.rootCmd.Flags().Bool("clean", false, "Clean database before starting new scan")
+	c.rootCmd.Flags().IntP("delay", "", 0, "Delay between requests in milliseconds (for rate limiting tests)")
+	c.rootCmd.Flags().IntP("burst", "", 1, "Number of requests to send in burst before delay")
 }
 
-// crawlCmd creates the crawl command
-func (c *Commands) crawlCmd() *cobra.Command {
-	var depth int
+// runMain handles the main command execution
+func (c *Commands) runMain(cmd *cobra.Command, args []string) error {
+	concurrency, _ := cmd.Flags().GetInt("concurrency")
+	format, _ := cmd.Flags().GetString("format")
+	clean, _ := cmd.Flags().GetBool("clean")
+	delay, _ := cmd.Flags().GetInt("delay")
+	burst, _ := cmd.Flags().GetInt("burst")
 
-	cmd := &cobra.Command{
-		Use:   "crawl [base-url]",
-		Short: "Crawl a website to discover links and forms",
-		Long:  `Crawl a target website to discover links, forms, and endpoints for security testing.`,
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			baseURL := args[0]
-			return c.runCrawl(baseURL, depth)
-		},
+	// If no arguments provided, show help
+	if len(args) == 0 {
+		return cmd.Help()
 	}
 
-	cmd.Flags().IntVarP(&depth, "depth", "d", 3, "Maximum crawl depth")
-	return cmd
+	input := args[0]
+
+	// Print banner
+	c.printBanner()
+
+	// Clean database if requested
+	if clean {
+		color.Yellow("🧹 Cleaning database...")
+		if err := c.store.CleanDatabase(); err != nil {
+			color.Red("❌ Failed to clean database: %v", err)
+			return fmt.Errorf("failed to clean database: %w", err)
+		}
+		color.Green("✅ Database cleaned successfully!")
+	}
+
+	// Check if input is a URL or file
+	if c.isURL(input) {
+		// URL provided - attack directly
+		color.Cyan("🔍 Starting direct attack on URL: %s", input)
+		if delay > 0 {
+			color.Yellow("⏱️ Delay between requests: %dms (burst: %d)", delay, burst)
+		}
+
+		if err := c.runAttackURL(input, concurrency, delay, burst); err != nil {
+			color.Red("❌ Attack failed: %v", err)
+			return fmt.Errorf("attack failed: %w", err)
+		}
+	} else {
+		// File provided - attack from file
+		color.Cyan("🔍 Loading requests from file: %s", input)
+		if delay > 0 {
+			color.Yellow("⏱️ Delay between requests: %dms (burst: %d)", delay, burst)
+		}
+
+		if err := c.runAttack(input, concurrency, delay, burst); err != nil {
+			color.Red("❌ Attack failed: %v", err)
+			return fmt.Errorf("attack failed: %w", err)
+		}
+	}
+
+	// Generate report
+	color.Cyan("📊 Generating security report...")
+	if err := c.runReport(format); err != nil {
+		color.Red("❌ Report generation failed: %v", err)
+		return fmt.Errorf("report generation failed: %w", err)
+	}
+
+	color.Green("✅ Security scan completed successfully!")
+	return nil
 }
 
-// attackCmd creates the attack command
-func (c *Commands) attackCmd() *cobra.Command {
-	var concurrency int
-
-	cmd := &cobra.Command{
-		Use:   "attack [requests-file]",
-		Short: "Attack requests with security payloads",
-		Long:  `Load requests from a file and perform security testing with various payloads.`,
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			requestsFile := args[0]
-			return c.runAttack(requestsFile, concurrency)
-		},
-	}
-
-	cmd.Flags().IntVarP(&concurrency, "concurrency", "c", 10, "Number of concurrent requests")
-	return cmd
+// printBanner prints the OWASPChecker banner
+func (c *Commands) printBanner() {
+	color.Cyan(`
+╔══════════════════════════════════════════════════════════════╗
+║                    OWASPChecker v1.0                        ║
+║              OWASP Top 10 Security Scanner                   ║
+║                                                              ║
+║  🔍 Crawl • ⚔️ Attack • 📊 Report • 🛡️ Secure              ║
+╚══════════════════════════════════════════════════════════════╝
+`)
 }
 
-// reportCmd creates the report command
-func (c *Commands) reportCmd() *cobra.Command {
-	var outputFormat string
-
-	cmd := &cobra.Command{
-		Use:   "report",
-		Short: "Generate security report",
-		Long:  `Generate a comprehensive security report from stored findings.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return c.runReport(outputFormat)
-		},
-	}
-
-	cmd.Flags().StringVarP(&outputFormat, "format", "f", "markdown", "Output format (markdown, html, json)")
-	return cmd
+// isURL checks if the input is a valid URL
+func (c *Commands) isURL(input string) bool {
+	return strings.HasPrefix(input, "http://") || strings.HasPrefix(input, "https://")
 }
 
 // runCrawl executes the crawl operation
 func (c *Commands) runCrawl(baseURL string, depth int) error {
-	fmt.Printf("Starting crawl of %s with depth %d...\n", baseURL, depth)
+	color.Yellow("🌐 Starting web crawler...")
+	color.Yellow("   Target: %s", baseURL)
+	color.Yellow("   Depth: %d", depth)
 
 	crawler := crawl.NewCrawler(c.client, c.store)
 	result, err := crawler.Crawl(baseURL, depth)
@@ -122,18 +171,161 @@ func (c *Commands) runCrawl(baseURL string, depth int) error {
 		return fmt.Errorf("crawl failed: %w", err)
 	}
 
-	fmt.Printf("Crawl completed!\n")
-	fmt.Printf("  Base URL: %s\n", result.BaseURL)
-	fmt.Printf("  Depth: %d\n", result.Depth)
-	fmt.Printf("  Requests discovered: %d\n", len(result.Requests))
-	fmt.Printf("  Duration: %v\n", result.EndTime.Sub(result.StartTime))
+	duration := result.EndTime.Sub(result.StartTime)
+	color.Green("✅ Crawl completed successfully!")
+	color.Green("   📍 Base URL: %s", result.BaseURL)
+	color.Green("   🔍 Depth: %d", result.Depth)
+	color.Green("   📄 Requests discovered: %d", len(result.Requests))
+	color.Green("   ⏱️  Duration: %v", duration)
+
+	return nil
+}
+
+// runAttackURL executes attack directly on a URL
+func (c *Commands) runAttackURL(targetURL string, concurrency int, delay int, burst int) error {
+	color.Yellow("🌐 Creating request for URL: %s", targetURL)
+
+	// Create a simple GET request for the URL
+	request := common.RecordedRequest{
+		ID:          uuid.New().String(),
+		URL:         targetURL,
+		Method:      "GET",
+		Headers:     map[string]string{"User-Agent": "OWASPChecker/1.0"},
+		Body:        "",
+		ContentType: "",
+		Variant:     "direct_url",
+		Timestamp:   time.Now(),
+		Source:      "direct_url",
+	}
+
+	requests := []common.RecordedRequest{request}
+	color.Green("✅ Created request for direct URL attack")
+
+	// Create attack engine
+	engine := attack.NewEngine(c.client, c.store, concurrency, delay, burst)
+
+	color.Yellow("⚔️ Starting direct URL attack...")
+	color.Yellow("   🔥 Concurrency: %d", concurrency)
+	color.Yellow("   📊 Target URL: %s", targetURL)
+
+	// Create progress bar
+	bar := progressbar.NewOptions(len(requests),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionShowBytes(false),
+		progressbar.OptionSetWidth(50),
+		progressbar.OptionSetDescription("[cyan][1/1][reset] Attacking URL..."),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+	)
+
+	result, err := engine.AttackWithProgress(requests, bar)
+	if err != nil {
+		return fmt.Errorf("attack failed: %w", err)
+	}
+
+	duration := result.EndTime.Sub(result.StartTime)
+	color.Green("\n   📄 Original requests: %d", len(result.OriginalRequests))
+	color.Green("   🔄 Mutated requests: %d", len(result.MutatedRequests))
+	color.Green("   📡 Responses: %d", len(result.Responses))
+	color.Green("   🚨 Findings: %d", len(result.Findings))
+	color.Green("   ⏱️  Duration: %v", duration)
+
+	// Store findings without progress bar to avoid conflicts
+	if len(result.Findings) > 0 {
+		color.Yellow("💾 Storing %d findings...", len(result.Findings))
+
+		successCount := 0
+		for _, finding := range result.Findings {
+			if err := c.store.StoreFinding(&finding); err != nil {
+				color.Red("❌ Failed to store finding: %v", err)
+			} else {
+				successCount++
+			}
+		}
+		color.Green("✅ Successfully stored %d/%d findings", successCount, len(result.Findings))
+	}
+
+	return nil
+}
+
+// runAttackFromStore attacks requests from the database
+func (c *Commands) runAttackFromStore(concurrency int, delay int, burst int) error {
+	color.Yellow("📂 Loading requests from database...")
+
+	// Get requests from store
+	requests, err := c.store.GetRequests()
+	if err != nil {
+		return fmt.Errorf("failed to get requests from store: %w", err)
+	}
+
+	if len(requests) == 0 {
+		color.Red("❌ No requests found in database. Run crawl first.")
+		return nil
+	}
+
+	color.Green("✅ Loaded %d requests from database", len(requests))
+
+	// Create attack engine
+	engine := attack.NewEngine(c.client, c.store, concurrency, delay, burst)
+
+	color.Yellow("⚔️ Starting security attack...")
+	color.Yellow("   🔥 Concurrency: %d", concurrency)
+	color.Yellow("   📊 Total requests to attack: %d", len(requests))
+
+	// Create progress bar
+	bar := progressbar.NewOptions(len(requests),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionShowBytes(false),
+		progressbar.OptionSetWidth(50),
+		progressbar.OptionSetDescription("[cyan][1/1][reset] Attacking requests..."),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+	)
+
+	result, err := engine.AttackWithProgress(requests, bar)
+	if err != nil {
+		return fmt.Errorf("attack failed: %w", err)
+	}
+
+	duration := result.EndTime.Sub(result.StartTime)
+	color.Green("✅ Attack completed successfully!")
+	color.Green("   📄 Original requests: %d", len(result.OriginalRequests))
+	color.Green("   🔄 Mutated requests: %d", len(result.MutatedRequests))
+	color.Green("   📡 Responses: %d", len(result.Responses))
+	color.Green("   🚨 Findings: %d", len(result.Findings))
+	color.Green("   ⏱️  Duration: %v", duration)
+
+	// Store findings without progress bar to avoid conflicts
+	if len(result.Findings) > 0 {
+		color.Yellow("💾 Storing %d findings...", len(result.Findings))
+
+		successCount := 0
+		for _, finding := range result.Findings {
+			if err := c.store.StoreFinding(&finding); err != nil {
+				color.Red("❌ Failed to store finding: %v", err)
+			} else {
+				successCount++
+			}
+		}
+		color.Green("✅ Successfully stored %d/%d findings", successCount, len(result.Findings))
+	}
 
 	return nil
 }
 
 // runAttack executes the attack operation
-func (c *Commands) runAttack(requestsFile string, concurrency int) error {
-	fmt.Printf("Loading requests from %s...\n", requestsFile)
+func (c *Commands) runAttack(requestsFile string, concurrency int, delay int, burst int) error {
+	color.Yellow("📂 Loading requests from file...")
 
 	// Load requests from file
 	requests, err := c.loadRequests(requestsFile)
@@ -141,29 +333,56 @@ func (c *Commands) runAttack(requestsFile string, concurrency int) error {
 		return fmt.Errorf("failed to load requests: %w", err)
 	}
 
-	fmt.Printf("Loaded %d requests\n", len(requests))
+	color.Green("✅ Loaded %d requests from file", len(requests))
 
 	// Create attack engine
-	engine := attack.NewEngine(c.client, c.store, concurrency)
+	engine := attack.NewEngine(c.client, c.store, concurrency, delay, burst)
 
-	fmt.Printf("Starting attack with concurrency %d...\n", concurrency)
-	result, err := engine.Attack(requests)
+	color.Yellow("⚔️ Starting security attack...")
+	color.Yellow("   🔥 Concurrency: %d", concurrency)
+	color.Yellow("   📊 Total requests to attack: %d", len(requests))
+
+	// Create progress bar
+	bar := progressbar.NewOptions(len(requests),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionShowBytes(false),
+		progressbar.OptionSetWidth(50),
+		progressbar.OptionSetDescription("[cyan][1/1][reset] Attacking requests..."),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+	)
+
+	result, err := engine.AttackWithProgress(requests, bar)
 	if err != nil {
 		return fmt.Errorf("attack failed: %w", err)
 	}
 
-	fmt.Printf("Attack completed!\n")
-	fmt.Printf("  Original requests: %d\n", len(result.OriginalRequests))
-	fmt.Printf("  Mutated requests: %d\n", len(result.MutatedRequests))
-	fmt.Printf("  Responses: %d\n", len(result.Responses))
-	fmt.Printf("  Findings: %d\n", len(result.Findings))
-	fmt.Printf("  Duration: %v\n", result.EndTime.Sub(result.StartTime))
+	duration := result.EndTime.Sub(result.StartTime)
+	color.Green("✅ Attack completed successfully!")
+	color.Green("   📄 Original requests: %d", len(result.OriginalRequests))
+	color.Green("   🔄 Mutated requests: %d", len(result.MutatedRequests))
+	color.Green("   📡 Responses: %d", len(result.Responses))
+	color.Green("   🚨 Findings: %d", len(result.Findings))
+	color.Green("   ⏱️  Duration: %v", duration)
 
-	// Store findings
-	for _, finding := range result.Findings {
-		if err := c.store.StoreFinding(&finding); err != nil {
-			fmt.Printf("Failed to store finding: %v\n", err)
+	// Store findings without progress bar to avoid conflicts
+	if len(result.Findings) > 0 {
+		color.Yellow("💾 Storing %d findings...", len(result.Findings))
+
+		successCount := 0
+		for _, finding := range result.Findings {
+			if err := c.store.StoreFinding(&finding); err != nil {
+				color.Red("❌ Failed to store finding: %v", err)
+			} else {
+				successCount++
+			}
 		}
+		color.Green("✅ Successfully stored %d/%d findings", successCount, len(result.Findings))
 	}
 
 	return nil
@@ -171,7 +390,7 @@ func (c *Commands) runAttack(requestsFile string, concurrency int) error {
 
 // runReport generates the security report
 func (c *Commands) runReport(outputFormat string) error {
-	fmt.Printf("Generating %s report...\n", outputFormat)
+	color.Yellow("📊 Generating %s report...", outputFormat)
 
 	// Get findings from store
 	findings, err := c.store.GetFindings()
@@ -180,7 +399,7 @@ func (c *Commands) runReport(outputFormat string) error {
 	}
 
 	if len(findings) == 0 {
-		fmt.Println("No findings to report.")
+		color.Yellow("⚠️  No findings to report.")
 		return nil
 	}
 
@@ -199,17 +418,54 @@ func (c *Commands) runReport(outputFormat string) error {
 		return fmt.Errorf("failed to generate report: %w", err)
 	}
 
-	fmt.Printf("Report generated: %s\n", outputFile)
-	fmt.Printf("  Total findings: %d\n", len(findings))
+	color.Green("✅ Report generated: %s", outputFile)
+	color.Green("   📊 Total findings: %d", len(findings))
 
-	// Print summary
+	// Print summary with colors
 	severityCounts := make(map[common.Severity]int)
 	for _, finding := range findings {
 		severityCounts[finding.Severity]++
 	}
 
+	// Print severity summary with colors
 	for severity, count := range severityCounts {
-		fmt.Printf("  %s: %d\n", severity, count)
+		switch severity {
+		case common.SeverityCritical:
+			color.Red("   🚨 Critical: %d", count)
+		case common.SeverityHigh:
+			color.Magenta("   ⚠️  High: %d", count)
+		case common.SeverityMedium:
+			color.Yellow("   ⚡ Medium: %d", count)
+		case common.SeverityLow:
+			color.Blue("   ℹ️  Low: %d", count)
+		}
+	}
+
+	// Print OWASP category summary
+	color.Cyan("\n📊 OWASP Top 10 Categories:")
+	categoryCounts := make(map[common.OWASPCategory]int)
+	for _, finding := range findings {
+		categoryCounts[finding.Category]++
+	}
+
+	// Sort categories by OWASP Top 10 order
+	categoryOrder := []common.OWASPCategory{
+		common.OWASPCategoryA01BrokenAccessControl,
+		common.OWASPCategoryA02CryptographicFailures,
+		common.OWASPCategoryA03Injection,
+		common.OWASPCategoryA04InsecureDesign,
+		common.OWASPCategoryA05SecurityMisconfiguration,
+		common.OWASPCategoryA06VulnerableComponents,
+		common.OWASPCategoryA07AuthFailures,
+		common.OWASPCategoryA08SoftwareDataIntegrity,
+		common.OWASPCategoryA09LoggingFailures,
+		common.OWASPCategoryA10SSRF,
+	}
+
+	for _, category := range categoryOrder {
+		if count, exists := categoryCounts[category]; exists && count > 0 {
+			color.Yellow("   🔍 %s: %d", category, count)
+		}
 	}
 
 	return nil
@@ -239,14 +495,12 @@ func (c *Commands) loadRequests(filename string) ([]common.RecordedRequest, erro
 // getFileExtension returns the file extension for the output format
 func getFileExtension(format string) string {
 	switch format {
-	case "markdown":
-		return "md"
 	case "html":
 		return "html"
 	case "json":
 		return "json"
 	default:
-		return "md"
+		return "html"
 	}
 }
 

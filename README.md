@@ -11,6 +11,9 @@ A comprehensive web application security scanner focusing on OWASP Top 10 vulner
 - **Comprehensive Reporting**: Generate reports in Markdown, HTML, or JSON formats
 - **Concurrent Testing**: Configurable concurrency for efficient scanning
 - **SQLite Storage**: Persistent storage of requests, responses, and findings
+- **Progress Tracking**: Real-time progress bars and status updates
+- **Colorful Output**: Rich terminal interface with emojis and colors
+- **Smart CLI**: Single command handles crawl, attack, and report generation
 
 ## Installation
 
@@ -33,26 +36,23 @@ go build -o owaspchecker cmd/owaspchecker/main.go
 ### Basic Commands
 
 ```bash
-# Crawl a website
-./owaspchecker crawl https://example.com --depth 3
+# Crawl and attack a website
+./owaspchecker https://example.com
 
 # Attack requests from a HAR file
-./owaspchecker attack requests.har --concurrency 10
+./owaspchecker requests.har
 
-# Generate a security report
-./owaspchecker report --format markdown
+# Attack requests from a JSON file
+./owaspchecker requests.json
 ```
 
 ### Command Options
 
-#### Crawl Command
-- `--depth, -d`: Maximum crawl depth (default: 3)
-
-#### Attack Command
+- `--depth, -d`: Maximum crawl depth (only for URL) (default: 3)
 - `--concurrency, -c`: Number of concurrent requests (default: 10)
-
-#### Report Command
-- `--format, -f`: Output format: markdown, html, json (default: markdown)
+- `--format, -f`: Report format: markdown, html, json (default: markdown)
+- `--crawl-only`: Only crawl, don't attack
+- `--attack-only`: Only attack, don't crawl
 
 ## Supported Attack Types
 
@@ -92,21 +92,29 @@ go build -o owaspchecker cmd/owaspchecker/main.go
 
 ## Workflow
 
-1. **Discovery**: Use `crawl` to discover endpoints or load existing requests
-2. **Testing**: Use `attack` to inject payloads and test for vulnerabilities
-3. **Analysis**: Use `report` to generate comprehensive security reports
+OWASPChecker automatically performs the complete security testing workflow:
+
+1. **Discovery**: Crawl the website to discover endpoints (if URL provided)
+2. **Testing**: Attack discovered endpoints with various payloads
+3. **Analysis**: Generate comprehensive security reports
 
 ## Example Workflow
 
 ```bash
-# 1. Crawl a target website
-./owaspchecker crawl https://vulnerable-webapp.com --depth 2
+# Complete security scan of a website
+./owaspchecker https://vulnerable-webapp.com --depth 2 --concurrency 15
 
-# 2. Attack discovered endpoints
-./owaspchecker attack owaspchecker.db --concurrency 15
+# Attack requests from a file
+./owaspchecker requests.har --concurrency 10
 
-# 3. Generate HTML report
-./owaspchecker report --format html
+# Only crawl without attacking
+./owaspchecker https://example.com --crawl-only
+
+# Generate HTML report
+./owaspchecker requests.har --format html
+
+# Quick scan with default settings
+./owaspchecker https://example.com
 ```
 
 ## Output Files

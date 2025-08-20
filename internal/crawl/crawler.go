@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gocolly/colly/v2"
+	"github.com/google/uuid"
 	"github.com/owaspchecker/internal/common"
 	"github.com/owaspchecker/internal/httpx"
 )
@@ -179,5 +180,5 @@ func buildFormBody(data map[string]string) string {
 
 // generateID generates a unique ID
 func generateID() string {
-	return fmt.Sprintf("%d_%d", time.Now().UnixNano(), time.Now().UnixNano()%1000)
+	return uuid.New().String()
 }

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/owaspchecker/internal/common"
 )
 
@@ -160,5 +161,5 @@ func (l *Loader) convertHAREntryToRequest(entry Entry) (*common.RecordedRequest,
 
 // generateID generates a unique ID
 func generateID() string {
-	return fmt.Sprintf("%d_%d", time.Now().UnixNano(), time.Now().UnixNano()%1000)
+	return uuid.New().String()
 }

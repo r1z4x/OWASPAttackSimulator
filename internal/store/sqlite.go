@@ -219,3 +219,20 @@ func (s *SQLiteStore) GetFindings() ([]common.Finding, error) {
 
 	return findings, nil
 }
+
+// CleanDatabase removes all data from the database
+func (s *SQLiteStore) CleanDatabase() error {
+	queries := []string{
+		"DELETE FROM findings",
+		"DELETE FROM responses",
+		"DELETE FROM requests",
+	}
+
+	for _, query := range queries {
+		if _, err := s.db.Exec(query); err != nil {
+			return fmt.Errorf("failed to execute clean query: %w", err)
+		}
+	}
+
+	return nil
+}
