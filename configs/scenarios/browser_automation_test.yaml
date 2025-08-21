@@ -25,7 +25,7 @@ steps:
   - id: navigate_home
     type: browser:navigate
     url: "{{ vars.base_url }}"
-    wait: "networkidle"
+    wait: "domcontentloaded"
     description: "Navigate to home page"
 
   # Step 2: Handle Cloudflare challenge (if present)
@@ -34,9 +34,11 @@ steps:
     description: "Handle Cloudflare challenge"
     selectors:
       - sel: "input[type='checkbox']"
-      - sel: "#challenge-stage input[type='checkbox']"
-      - sel: ".cf-checkbox"
-      - sel: "[data-testid='challenge-stage'] input[type='checkbox']"
+      - sel: ".cb-lb input[type='checkbox']"
+      - sel: "label.cb-lb input[type='checkbox']"
+      - sel: "#LsMgo8 input[type='checkbox']"
+      - sel: ".cb-c input[type='checkbox']"
+      - sel: "[role='alert'] input[type='checkbox']"
 
   # Step 3: Click login button
   - id: login_page

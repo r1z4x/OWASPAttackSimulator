@@ -781,9 +781,19 @@ const server = http.createServer((req: any, res: any) => {
             try {
           switch (data.action) {
             case 'navigate':
+                  console.log(`🚀 Starting navigation to: ${data.url}`);
+                  
                   // Use wait parameter from scenario if provided, otherwise default to domcontentloaded
                   const waitUntil = data.wait || 'domcontentloaded';
-                  await page.goto(data.url, { waitUntil: waitUntil, timeout: 30000 });
+                  console.log(`⏳ Wait parameter: ${data.wait}, Using: ${waitUntil}`);
+                  
+                  await page.goto(data.url, { waitUntil: waitUntil, timeout: 45000 });
+                  
+                  // Get current URL and title for verification
+                  const currentUrl = page.url();
+                  const currentTitle = await page.title();
+                  console.log(`📍 Current URL: ${currentUrl}`);
+                  console.log(`📄 Current Title: ${currentTitle}`);
                   
                   // Quick check for Cloudflare
                   try {
@@ -798,7 +808,12 @@ const server = http.createServer((req: any, res: any) => {
                     // No Cloudflare, continue
                   }
                   
-                  console.log(`✅ Navigated to: ${data.url} (Attempt ${attempt}/${maxRetries})`);
+                  // Verify navigation was successful
+                  if (currentUrl === data.url || currentUrl.includes(new URL(data.url).hostname)) {
+                    console.log(`✅ Navigation successful: ${data.url} (Attempt ${attempt}/${maxRetries})`);
+                  } else {
+                    console.log(`⚠️ Navigation may have failed. Expected: ${data.url}, Got: ${currentUrl}`);
+                  }
               break;
               
             case 'fill':

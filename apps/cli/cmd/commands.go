@@ -7,7 +7,9 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/owaspchecker/pkg/engine"
@@ -280,8 +282,20 @@ func sendAttackStartToGUI(target, method, payloadSet string) {
 		guiURL = "http://localhost:3000"
 	}
 
-	// Send to GUI API
-	resp, err := http.Post(guiURL+"/api/attack/start", "application/json", strings.NewReader(string(jsonData)))
+	// Create context with timeout for HTTP request
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Create HTTP request with context
+	req, err := http.NewRequestWithContext(ctx, "POST", guiURL+"/api/attack/start", strings.NewReader(string(jsonData)))
+	if err != nil {
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Send to GUI API with context
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return
 	}
@@ -309,8 +323,20 @@ func sendAttackUpdateToGUI(progress int, requests int, findings int, step string
 		guiURL = "http://localhost:3000"
 	}
 
-	// Send to GUI API
-	resp, err := http.Post(guiURL+"/api/attack/update", "application/json", strings.NewReader(string(jsonData)))
+	// Create context with timeout for HTTP request
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Create HTTP request with context
+	req, err := http.NewRequestWithContext(ctx, "POST", guiURL+"/api/attack/update", strings.NewReader(string(jsonData)))
+	if err != nil {
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Send to GUI API with context
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return
 	}
@@ -356,8 +382,21 @@ func sendScenarioStartToGUI(scenarioName, file string) {
 		guiURL = "http://localhost:3000"
 	}
 
-	// Send to GUI API
-	resp, err := http.Post(guiURL+"/api/attack/start", "application/json", strings.NewReader(string(jsonData)))
+	// Create context with timeout for HTTP request
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Create HTTP request with context
+	req, err := http.NewRequestWithContext(ctx, "POST", guiURL+"/api/attack/start", strings.NewReader(string(jsonData)))
+	if err != nil {
+		fmt.Printf("❌ Failed to create request: %v\n", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Send to GUI API with context
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Printf("❌ Failed to send to GUI: %v\n", err)
 		return
@@ -365,6 +404,41 @@ func sendScenarioStartToGUI(scenarioName, file string) {
 	defer resp.Body.Close()
 
 	fmt.Printf("✅ Scenario start sent to GUI successfully\n")
+}
+
+// sendScenarioErrorToGUI sends scenario error notification to GUI
+func sendScenarioErrorToGUI(scenarioName string, errorMessage string, totalRequests int, totalFindings int) {
+	errorData := map[string]interface{}{
+		"scenario":   scenarioName,
+		"progress":   0,
+		"requests":   totalRequests,
+		"findings":   totalFindings,
+		"step":       errorMessage,
+		"status":     "failed",
+		"lastUpdate": time.Now().Unix(),
+	}
+
+	jsonData, err := json.Marshal(errorData)
+	if err != nil {
+		fmt.Printf("❌ Failed to marshal error data: %v\n", err)
+		return
+	}
+
+	// Get GUI URL from environment or use default
+	guiURL := os.Getenv("OWASPCHECKER_GUI_URL")
+	if guiURL == "" {
+		guiURL = "http://localhost:3000"
+	}
+
+	// Send to GUI API
+	resp, err := http.Post(guiURL+"/api/attack/update", "application/json", strings.NewReader(string(jsonData)))
+	if err != nil {
+		fmt.Printf("❌ Failed to send error to GUI: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	fmt.Printf("✅ Error status sent to GUI: %s\n", errorMessage)
 }
 
 // sendScenarioCompletionToGUI sends scenario completion notification to GUI
@@ -393,8 +467,21 @@ func sendScenarioCompletionToGUI(scenarioName string, totalRequests int, totalFi
 		guiURL = "http://localhost:3000"
 	}
 
-	// Send to GUI API
-	resp, err := http.Post(guiURL+"/api/attack/update", "application/json", strings.NewReader(string(jsonData)))
+	// Create context with timeout for HTTP request
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Create HTTP request with context
+	req, err := http.NewRequestWithContext(ctx, "POST", guiURL+"/api/attack/update", strings.NewReader(string(jsonData)))
+	if err != nil {
+		fmt.Printf("❌ Failed to create request: %v\n", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Send to GUI API with context
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Printf("❌ Failed to send completion to GUI: %v\n", err)
 		return
@@ -407,7 +494,7 @@ func sendScenarioCompletionToGUI(scenarioName string, totalRequests int, totalFi
 // executeStepWithRetry executes a step with retry mechanism
 func executeStepWithRetry(step ScenarioStep, stepIndex int, totalSteps int, attackEngine *engine.Engine, scenario *Scenario, totalRequests *int, totalFindings *int) error {
 	maxRetries := 3
-	retryDelay := 2 * time.Second
+	retryDelay := 500 * time.Millisecond // Reduced from 2 seconds to 500ms
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		fmt.Printf("📋 Step %d/%d: %s (%s) - Attempt %d/%d\n", stepIndex+1, totalSteps, step.ID, step.Type, attempt, maxRetries)
@@ -450,7 +537,7 @@ func executeStepWithRetry(step ScenarioStep, stepIndex int, totalSteps int, atta
 		if attempt < maxRetries {
 			fmt.Printf("🔄 Retrying in %v...\n", retryDelay)
 			time.Sleep(retryDelay)
-			retryDelay *= 2 // Exponential backoff
+			retryDelay = time.Duration(float64(retryDelay) * 1.5) // Reduced exponential backoff from 2x to 1.5x
 		} else {
 			return fmt.Errorf("step '%s' failed after %d attempts: %v", step.Description, maxRetries, err)
 		}
@@ -469,6 +556,14 @@ func executeScenario(scenario *Scenario, concurrency int, timeout string) error 
 		timeoutDuration = 60 * time.Second
 	}
 
+	// Create context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	defer cancel()
+
+	// Setup signal handling for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
 	// Create attack engine
 	attackEngine := engine.NewEngine(timeoutDuration, concurrency)
 
@@ -478,30 +573,25 @@ func executeScenario(scenario *Scenario, concurrency int, timeout string) error 
 
 	// Execute each step with retry mechanism
 	for i, step := range scenario.Steps {
+		// Check for context cancellation or signals
+		select {
+		case <-ctx.Done():
+			errorMessage := "Scenario cancelled due to timeout"
+			sendScenarioErrorToGUI(scenario.Name, errorMessage, totalRequests, totalFindings)
+			return fmt.Errorf("scenario cancelled: %v", ctx.Err())
+		case sig := <-sigChan:
+			errorMessage := fmt.Sprintf("Scenario interrupted by signal: %v", sig)
+			sendScenarioErrorToGUI(scenario.Name, errorMessage, totalRequests, totalFindings)
+			return fmt.Errorf("scenario interrupted: %v", sig)
+		default:
+			// Continue with step execution
+		}
+
 		err := executeStepWithRetry(step, i, len(scenario.Steps), attackEngine, scenario, &totalRequests, &totalFindings)
 		if err != nil {
 			// Send error status to GUI
 			errorMessage := fmt.Sprintf("Failed at step %d: %s", i+1, step.Description)
-			sendAttackUpdateToGUI(0, totalRequests, totalFindings, errorMessage)
-
-			// Send final error status to GUI
-			errorData := map[string]interface{}{
-				"scenario":   scenario.Name,
-				"progress":   0,
-				"requests":   totalRequests,
-				"findings":   totalFindings,
-				"step":       errorMessage,
-				"status":     "failed",
-				"lastUpdate": time.Now().Unix(),
-			}
-
-			jsonData, _ := json.Marshal(errorData)
-			guiURL := os.Getenv("OWASPCHECKER_GUI_URL")
-			if guiURL == "" {
-				guiURL = "http://localhost:3000"
-			}
-			http.Post(guiURL+"/api/attack/update", "application/json", strings.NewReader(string(jsonData)))
-
+			sendScenarioErrorToGUI(scenario.Name, errorMessage, totalRequests, totalFindings)
 			return fmt.Errorf("scenario failed at step %d (%s): %v", i+1, step.Description, err)
 		}
 	}
@@ -566,10 +656,14 @@ func executeNavigateStep(step ScenarioStep, scenario *Scenario) error {
 		return fmt.Errorf("empty URL after variable resolution")
 	}
 
+	fmt.Printf("🔍 Resolved URL: %s\n", resolvedURL)
+	fmt.Printf("🔍 Wait parameter: %s\n", step.Wait)
+
 	// Send navigation command to GUI
 	navigationData := map[string]interface{}{
 		"action": "navigate",
 		"url":    resolvedURL,
+		"wait":   step.Wait,
 		"step":   step.Description,
 	}
 
@@ -584,8 +678,20 @@ func executeNavigateStep(step ScenarioStep, scenario *Scenario) error {
 		guiURL = "http://localhost:3000"
 	}
 
-	// Send to GUI API
-	resp, err := http.Post(guiURL+"/api/browser/action", "application/json", strings.NewReader(string(jsonData)))
+	// Create context with timeout for HTTP request
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Create HTTP request with context
+	req, err := http.NewRequestWithContext(ctx, "POST", guiURL+"/api/browser/action", strings.NewReader(string(jsonData)))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Send to GUI API with context
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to send navigation command: %v", err)
 	}
@@ -642,8 +748,20 @@ func executeFillStep(step ScenarioStep, scenario *Scenario) error {
 			guiURL = "http://localhost:3000"
 		}
 
-		// Send to GUI API
-		resp, err := http.Post(guiURL+"/api/browser/action", "application/json", strings.NewReader(string(jsonData)))
+		// Create context with timeout for HTTP request
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		// Create HTTP request with context
+		req, err := http.NewRequestWithContext(ctx, "POST", guiURL+"/api/browser/action", strings.NewReader(string(jsonData)))
+		if err != nil {
+			return fmt.Errorf("failed to create request: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		// Send to GUI API with context
+		client := &http.Client{}
+		resp, err := client.Do(req)
 		if err != nil {
 			return fmt.Errorf("failed to send fill command: %v", err)
 		}
@@ -700,8 +818,20 @@ func executeClickStep(step ScenarioStep, scenario *Scenario) error {
 			guiURL = "http://localhost:3000"
 		}
 
-		// Send to GUI API
-		resp, err := http.Post(guiURL+"/api/browser/action", "application/json", strings.NewReader(string(jsonData)))
+		// Create context with timeout for HTTP request
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		// Create HTTP request with context
+		req, err := http.NewRequestWithContext(ctx, "POST", guiURL+"/api/browser/action", strings.NewReader(string(jsonData)))
+		if err != nil {
+			return fmt.Errorf("failed to create request: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		// Send to GUI API with context
+		client := &http.Client{}
+		resp, err := client.Do(req)
 		if err != nil {
 			return fmt.Errorf("failed to send click command: %v", err)
 		}
