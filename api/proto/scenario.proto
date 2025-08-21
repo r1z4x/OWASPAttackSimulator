@@ -1,0 +1,180 @@
+syntax = "proto3";
+
+package owaspchecker.scenario;
+
+option go_package = "github.com/owaspchecker/api/proto;proto";
+
+import "google/protobuf/timestamp.proto";
+
+// Scenario definition service
+service ScenarioService {
+  rpc ValidateScenario(ValidateScenarioRequest) returns (ValidateScenarioResponse);
+  rpc ParseScenario(ParseScenarioRequest) returns (ParseScenarioResponse);
+  rpc ExecuteScenario(ExecuteScenarioRequest) returns (stream ScenarioEvent);
+}
+
+// Scenario validation
+message ValidateScenarioRequest {
+  bytes scenario_data = 1; // YAML content
+  string format = 2; // "yaml" or "json"
+}
+
+message ValidateScenarioResponse {
+  bool valid = 1;
+  repeated ValidationError errors = 2;
+  repeated ValidationWarning warnings = 3;
+}
+
+message ValidationError {
+  string field = 1;
+  string message = 2;
+  int32 line = 3;
+  int32 column = 4;
+}
+
+message ValidationWarning {
+  string field = 1;
+  string message = 2;
+  int32 line = 3;
+  int32 column = 4;
+}
+
+// Scenario parsing
+message ParseScenarioRequest {
+  bytes scenario_data = 1;
+  string format = 2;
+}
+
+message ParseScenarioResponse {
+  Scenario scenario = 1;
+  repeated ParseError errors = 2;
+}
+
+message ParseError {
+  string message = 1;
+  int32 line = 2;
+  int32 column = 3;
+}
+
+// Scenario execution
+message ExecuteScenarioRequest {
+  string session_id = 1;
+  Scenario scenario = 2;
+  map<string, string> variables = 3;
+  ExecutionConfig config = 4;
+}
+
+message ExecutionConfig {
+  int32 concurrency = 1;
+  int32 timeout_seconds = 2;
+  bool dry_run = 3;
+  repeated string enabled_steps = 4;
+  repeated string disabled_steps = 5;
+}
+
+// Scenario structure
+message Scenario {
+  string version = 1;
+  string name = 2;
+  string description = 3;
+  map<string, string> variables = 4;
+  repeated Step steps = 5;
+  map<string, string> metadata = 6;
+}
+
+message Step {
+  string id = 1;
+  string type = 2;
+  string name = 3;
+  string description = 4;
+  map<string, string> inputs = 5;
+  map<string, string> guards = 6;
+  map<string, string> effects = 7;
+  int32 timeout_seconds = 8;
+  int32 retry_count = 9;
+  repeated string on_success = 10;
+  repeated string on_failure = 11;
+  repeated Step children = 12; // For control steps
+  map<string, string> metadata = 13;
+}
+
+// Step types
+message BrowserStep {
+  string action = 1; // navigate, fill, click, wait, screenshot, script
+  string url = 2;
+  string selector = 3;
+  string value = 4;
+  string wait_condition = 5; // networkidle, domcontentloaded, etc.
+  map<string, string> options = 6;
+}
+
+message SessionStep {
+  string action = 1; // update, save, restore
+  string source = 2; // browser, file, manual
+  repeated string items = 3; // cookies, headers, storage
+  map<string, string> data = 4;
+}
+
+message NetworkStep {
+  string action = 1; // request, mutate, attack, check
+  string method = 2;
+  string url = 3;
+  map<string, string> headers = 4;
+  bytes body = 5;
+  string content_type = 6;
+  MutationConfig mutation = 7;
+  CheckConfig checks = 8;
+}
+
+message MutationConfig {
+  repeated string methods = 1;
+  repeated string bodies = 2;
+  repeated string payload_sets = 3;
+  int32 max_variants_per_req = 4;
+  map<string, string> options = 5;
+}
+
+message CheckConfig {
+  repeated string enabled = 1;
+  map<string, string> thresholds = 2;
+  map<string, string> options = 3;
+}
+
+message CrawlStep {
+  string action = 1; // run, feed
+  string seed_url = 2;
+  map<string, string> options = 3;
+}
+
+message ControlStep {
+  string type = 1; // if, while, foreach
+  string condition = 2;
+  repeated Step body = 3;
+  repeated string data_set = 4;
+}
+
+message PluginStep {
+  string name = 1;
+  string action = 2;
+  map<string, string> parameters = 3;
+}
+
+// Execution events
+message ScenarioEvent {
+  string event_id = 1;
+  string session_id = 2;
+  string scenario_id = 3;
+  string step_id = 4;
+  string kind = 5; // SCENARIO_STARTED, STEP_STARTED, STEP_COMPLETED, STEP_FAILED, SCENARIO_COMPLETED
+  bytes payload = 6;
+  google.protobuf.Timestamp timestamp = 7;
+}
+
+message StepExecutionEvent {
+  string step_id = 1;
+  string status = 2; // PENDING, RUNNING, COMPLETED, FAILED, CANCELLED
+  string error_message = 3;
+  map<string, string> results = 4;
+  google.protobuf.Timestamp started_at = 5;
+  google.protobuf.Timestamp completed_at = 6;
+}

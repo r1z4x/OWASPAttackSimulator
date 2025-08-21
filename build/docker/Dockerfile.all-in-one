@@ -1,0 +1,108 @@
+# Multi-stage build for All-in-One
+FROM golang:1.23-alpine AS go-builder
+
+# Install build dependencies
+RUN apk add --no-cache git ca-certificates tzdata build-base
+
+# Set working directory
+WORKDIR /app
+
+# Copy go mod files
+COPY go.mod go.sum go.work ./
+COPY apps/cli/go.mod apps/cli/
+COPY pkg/broker/go.mod pkg/broker/
+COPY pkg/scenario/go.mod pkg/scenario/
+COPY pkg/engine/go.mod pkg/engine/
+COPY pkg/mutate/go.mod pkg/mutate/
+COPY pkg/checks/go.mod pkg/checks/
+COPY pkg/httpx/go.mod pkg/httpx/
+COPY pkg/session/go.mod pkg/session/
+COPY pkg/crawl/go.mod pkg/crawl/
+COPY pkg/store/go.mod pkg/store/
+COPY pkg/report/go.mod pkg/report/
+COPY pkg/common/go.mod pkg/common/
+COPY pkg/plugins/go.mod pkg/plugins/
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the CLI application
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o owaspchecker ./apps/cli
+
+# Node.js builder stage
+FROM node:18-alpine AS node-builder
+
+# Install build dependencies
+RUN apk add --no-cache git
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY apps/gui-runner/package*.json ./
+COPY apps/gui-runner/pnpm-lock.yaml* ./
+
+# Install dependencies
+RUN npm install -g pnpm && pnpm install
+
+# Copy source code
+COPY apps/gui-runner/ .
+
+# Build the GUI application
+RUN pnpm build
+
+# Final stage
+FROM alpine:latest
+
+# Install runtime dependencies
+RUN apk --no-cache add ca-certificates tzdata sqlite nodejs npm
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Create non-root user
+RUN addgroup -g 1001 -S owaspchecker && \
+    adduser -u 1001 -S owaspchecker -G owaspchecker
+
+# Set working directory
+WORKDIR /app
+
+# Copy CLI binary
+COPY --from=go-builder /app/owaspchecker ./bin/
+
+# Copy GUI application
+COPY --from=node-builder /app/dist ./gui/dist
+COPY --from=node-builder /app/package*.json ./gui/
+COPY --from=node-builder /app/pnpm-lock.yaml ./gui/
+
+# Install production dependencies for GUI
+WORKDIR /app/gui
+RUN pnpm install --prod
+
+# Copy configuration files
+WORKDIR /app
+COPY configs/ ./configs/
+
+# Create data directory
+RUN mkdir -p /app/data && \
+    chown -R owaspchecker:owaspchecker /app
+
+# Switch to non-root user
+USER owaspchecker
+
+# Expose ports
+EXPOSE 50051 3000
+
+# Copy startup script
+COPY build/docker/start.sh ./start.sh
+RUN chmod +x ./start.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ["./bin/owaspchecker", "db", "stats"] || exit 1
+
+# Default command
+ENTRYPOINT ["./start.sh"]

@@ -1,0 +1,67 @@
+# Multi-stage build for GUI Runner
+FROM node:18-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache git
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY apps/gui-runner/package*.json ./
+COPY apps/gui-runner/pnpm-lock.yaml* ./
+
+# Install dependencies
+RUN npm install -g pnpm && pnpm install
+
+# Copy source code
+COPY apps/gui-runner/ .
+
+# Build the application
+RUN pnpm build
+
+# Production stage
+FROM node:18-alpine AS production
+
+# Install runtime dependencies including browser dependencies
+RUN apk --no-cache add ca-certificates tzdata \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1001 -S owaspchecker && \
+    adduser -u 1001 -S owaspchecker -G owaspchecker
+
+# Set working directory
+WORKDIR /app
+
+# Copy built application
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/pnpm-lock.yaml* ./
+
+# Install production dependencies
+RUN npm install -g pnpm && pnpm install --prod
+
+# Create data directory
+RUN mkdir -p /app/data && \
+    chown -R owaspchecker:owaspchecker /app
+
+# Switch to non-root user
+USER owaspchecker
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+
+# Default command - keep the process running
+CMD ["node", "dist/index.js"]

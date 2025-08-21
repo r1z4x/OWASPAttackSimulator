@@ -1,0 +1,210 @@
+syntax = "proto3";
+
+package owaspchecker.broker;
+
+option go_package = "github.com/owaspchecker/api/proto;proto";
+
+import "google/protobuf/timestamp.proto";
+
+// Session management service
+service SessionService {
+  rpc OpenSession(OpenSessionRequest) returns (OpenSessionResponse);
+  rpc AttachSession(AttachSessionRequest) returns (AttachSessionResponse);
+  rpc DetachSession(DetachSessionRequest) returns (DetachSessionResponse);
+  rpc CloseSession(CloseSessionRequest) returns (CloseSessionResponse);
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
+  rpc UpdateSession(UpdateSessionRequest) returns (UpdateSessionResponse);
+}
+
+// Step execution service
+service StepService {
+  rpc PushStep(PushStepRequest) returns (PushStepResponse);
+  rpc CancelStep(CancelStepRequest) returns (CancelStepResponse);
+  rpc GetStepStatus(GetStepStatusRequest) returns (GetStepStatusResponse);
+  rpc StreamEvents(StreamEventsRequest) returns (stream Event);
+}
+
+// Artifact management service
+service ArtifactService {
+  rpc PushArtifact(PushArtifactRequest) returns (PushArtifactResponse);
+  rpc GetArtifact(GetArtifactRequest) returns (GetArtifactResponse);
+  rpc ListArtifacts(ListArtifactsRequest) returns (ListArtifactsResponse);
+}
+
+// Session messages
+message OpenSessionRequest {
+  string target_url = 1;
+  string har_file = 2;
+  string cookies_jar = 3;
+  bool headless = 4;
+}
+
+message OpenSessionResponse {
+  string session_id = 1;
+  SessionInfo session_info = 2;
+}
+
+message AttachSessionRequest {
+  string session_id = 1;
+}
+
+message AttachSessionResponse {
+  SessionInfo session_info = 1;
+}
+
+message DetachSessionRequest {
+  string session_id = 1;
+}
+
+message DetachSessionResponse {
+  bool success = 1;
+}
+
+message CloseSessionRequest {
+  string session_id = 1;
+}
+
+message CloseSessionResponse {
+  bool success = 1;
+}
+
+message GetSessionRequest {
+  string session_id = 1;
+}
+
+message GetSessionResponse {
+  SessionInfo session_info = 1;
+}
+
+message UpdateSessionRequest {
+  string session_id = 1;
+  SessionData session_data = 2;
+}
+
+message UpdateSessionResponse {
+  bool success = 1;
+}
+
+message SessionInfo {
+  string session_id = 1;
+  string target_url = 2;
+  SessionData session_data = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message SessionData {
+  map<string, string> cookies = 1;
+  map<string, string> headers = 2;
+  string csrf_token = 3;
+  map<string, string> storage = 4;
+}
+
+// Step messages
+message PushStepRequest {
+  string session_id = 1;
+  Step step = 2;
+}
+
+message PushStepResponse {
+  string step_id = 1;
+  bool queued = 2;
+}
+
+message CancelStepRequest {
+  string session_id = 1;
+  string step_id = 2;
+}
+
+message CancelStepResponse {
+  bool cancelled = 1;
+}
+
+message GetStepStatusRequest {
+  string session_id = 1;
+  string step_id = 2;
+}
+
+message GetStepStatusResponse {
+  StepStatus status = 1;
+}
+
+message StreamEventsRequest {
+  string session_id = 1;
+  string step_id = 2;
+}
+
+message Step {
+  string id = 1;
+  string type = 2;
+  map<string, string> inputs = 3;
+  map<string, string> guards = 4;
+  map<string, string> effects = 5;
+  int32 timeout_seconds = 6;
+  int32 retry_count = 7;
+  repeated string on_success = 8;
+  repeated string on_failure = 9;
+}
+
+message StepStatus {
+  string step_id = 1;
+  string status = 2; // PENDING, RUNNING, COMPLETED, FAILED, CANCELLED
+  string error_message = 3;
+  google.protobuf.Timestamp started_at = 4;
+  google.protobuf.Timestamp completed_at = 5;
+}
+
+// Event messages
+message Event {
+  string event_id = 1;
+  string session_id = 2;
+  string step_id = 3;
+  string kind = 4; // STEP_STARTED, STEP_COMPLETED, STEP_FAILED, ARTIFACT_SAVED, FINDING_CREATED
+  bytes payload = 5;
+  google.protobuf.Timestamp timestamp = 6;
+}
+
+// Artifact messages
+message PushArtifactRequest {
+  string session_id = 1;
+  string step_id = 2;
+  string kind = 3;
+  string path = 4;
+  bytes data = 5;
+  map<string, string> metadata = 6;
+}
+
+message PushArtifactResponse {
+  string artifact_id = 1;
+  bool saved = 2;
+}
+
+message GetArtifactRequest {
+  string session_id = 1;
+  string artifact_id = 2;
+}
+
+message GetArtifactResponse {
+  ArtifactInfo artifact = 1;
+  bytes data = 2;
+}
+
+message ListArtifactsRequest {
+  string session_id = 1;
+  string step_id = 2;
+  string kind = 3;
+}
+
+message ListArtifactsResponse {
+  repeated ArtifactInfo artifacts = 1;
+}
+
+message ArtifactInfo {
+  string artifact_id = 1;
+  string session_id = 2;
+  string step_id = 3;
+  string kind = 4;
+  string path = 5;
+  map<string, string> metadata = 6;
+  google.protobuf.Timestamp created_at = 7;
+}

@@ -71,17 +71,18 @@ func (c *Checker) initPatterns() {
 func (c *Checker) CheckResponse(req *common.RecordedRequest, resp *common.RecordedResponse) []common.Finding {
 	var findings []common.Finding
 
+	// Always analyze general response behavior first
+	generalFindings := c.analyzeGeneralResponse(req, resp)
+	findings = append(findings, generalFindings...)
+
 	// Extract attack type from request variant or payload
 	attackType := c.extractAttackType(req)
-	if attackType == "" {
-		// If no specific attack type detected, analyze general response behavior
-		return c.analyzeGeneralResponse(req, resp)
-	}
-
-	// Analyze response behavior for specific attack type
-	finding := c.analyzeAttackResponse(req, resp, attackType)
-	if finding != nil {
-		findings = append(findings, *finding)
+	if attackType != "" {
+		// Analyze response behavior for specific attack type
+		finding := c.analyzeAttackResponse(req, resp, attackType)
+		if finding != nil {
+			findings = append(findings, *finding)
+		}
 	}
 
 	return findings

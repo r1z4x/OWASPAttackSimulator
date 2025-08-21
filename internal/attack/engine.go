@@ -172,6 +172,7 @@ func (e *Engine) attackRequest(req *common.RecordedRequest) attackResult {
 	mutatedRequests = append(mutatedRequests, mutations...)
 
 	// Send original request
+	fmt.Printf("🔍 Testing original request: %s %s\n", req.Method, req.URL)
 	originalResp, err := e.sendRequest(req)
 	if err != nil {
 		fmt.Printf("Failed to send original request %s: %v\n", req.ID, err)
@@ -185,6 +186,7 @@ func (e *Engine) attackRequest(req *common.RecordedRequest) attackResult {
 
 	// Send mutated requests
 	for _, mutation := range mutations {
+		fmt.Printf("🚀 Testing mutation: %s %s (Payload: %s)\n", mutation.Method, mutation.URL, truncatePayload(mutation.Body))
 		resp, err := e.sendRequest(&mutation)
 		if err != nil {
 			fmt.Printf("Failed to send mutated request %s: %v\n", mutation.ID, err)
@@ -313,4 +315,12 @@ func generateID() string {
 func generateHash(data []byte) string {
 	hash := sha256.Sum256(data)
 	return fmt.Sprintf("%x", hash)
+}
+
+// truncatePayload truncates payload for display
+func truncatePayload(payload string) string {
+	if len(payload) > 50 {
+		return payload[:50] + "..."
+	}
+	return payload
 }

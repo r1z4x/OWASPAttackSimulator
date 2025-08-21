@@ -1,0 +1,265 @@
+# OWASPChecker Default Configuration
+
+# Broker configuration
+broker:
+  addr: "localhost:50051"
+  tls:
+    enabled: false
+    cert_file: ""
+    key_file: ""
+    ca_file: ""
+
+# HTTP client configuration
+http:
+  timeouts:
+    connect: "10s"
+    read: "30s"
+    write: "30s"
+    idle: "90s"
+  retry:
+    max_attempts: 3
+    backoff_delay: "1s"
+    max_delay: "10s"
+    jitter: true
+  rate_limit:
+    requests_per_second: 10
+    burst_size: 20
+  user_agent: "OWASPChecker/1.0"
+  follow_redirects: true
+  max_redirects: 10
+
+# Engine configuration
+engine:
+  concurrency:
+    default: 8
+    max: 32
+  queues:
+    priority: 1000
+    normal: 5000
+    low: 1000
+  backoff:
+    initial_delay: "1s"
+    max_delay: "60s"
+    multiplier: 2.0
+  circuit_breaker:
+    failure_threshold: 5
+    recovery_timeout: "30s"
+    half_open_max_requests: 3
+
+# Mutation configuration
+mutate:
+  enabled_sets:
+    - "xss.reflected"
+    - "xss.dom"
+    - "sqli.error"
+    - "sqli.time"
+    - "ssrf.basic"
+    - "xxe.file"
+    - "cmdi.shell"
+    - "deserialization.hints"
+  max_variants_per_req: 12
+  payload_sets:
+    xss:
+      reflected:
+        - "<script>alert('XSS')</script>"
+        - "<img src=x onerror=alert('XSS')>"
+        - "javascript:alert('XSS')"
+      dom:
+        - "document.location='javascript:alert(1)'"
+        - "eval('alert(1)')"
+    sqli:
+      error:
+        - "' OR 1=1--"
+        - "' UNION SELECT NULL--"
+        - "'; DROP TABLE users--"
+      time:
+        - "' AND (SELECT * FROM (SELECT(SLEEP(5)))a)--"
+        - "' WAITFOR DELAY '00:00:05'--"
+    ssrf:
+      basic:
+        - "http://localhost:8080"
+        - "http://127.0.0.1:8080"
+        - "http://[::1]:8080"
+    xxe:
+      file:
+        - "<?xml version='1.0'?><!DOCTYPE test [<!ENTITY xxe SYSTEM 'file:///etc/passwd'>]><test>&xxe;</test>"
+    cmdi:
+      shell:
+        - "| whoami"
+        - "; cat /etc/passwd"
+        - "`id`"
+    deserialization:
+      hints:
+        - "O:8:\"stdClass\":0:{}"
+        - "a:1:{s:4:\"test\";s:4:\"test\";}"
+
+# Security checks configuration
+checks:
+  enabled:
+    - "xss"
+    - "sqli"
+    - "ssrf"
+    - "xxe"
+    - "headers"
+    - "cors"
+    - "csrf"
+    - "authz"
+  thresholds:
+    timing_delta: "100ms"
+    response_size_min: 100
+    response_size_max: 1048576
+  xss:
+    reflected_patterns:
+      - "<script>"
+      - "javascript:"
+      - "onerror="
+      - "onload="
+    dom_patterns:
+      - "document.location"
+      - "eval("
+      - "innerHTML"
+  sqli:
+    error_patterns:
+      - "SQL syntax"
+      - "mysql_fetch"
+      - "ORA-"
+      - "PostgreSQL"
+    time_threshold: "3s"
+  ssrf:
+    internal_ips:
+      - "127.0.0.1"
+      - "localhost"
+      - "::1"
+      - "10.0.0.0/8"
+      - "172.16.0.0/12"
+      - "192.168.0.0/16"
+  xxe:
+    file_patterns:
+      - "/etc/passwd"
+      - "file://"
+      - "php://"
+  headers:
+    security_headers:
+      - "X-Frame-Options"
+      - "X-Content-Type-Options"
+      - "X-XSS-Protection"
+      - "Content-Security-Policy"
+      - "Strict-Transport-Security"
+  cors:
+    check_origin: true
+    check_credentials: true
+  csrf:
+    state_changing_methods:
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "PATCH"
+  authz:
+    idor_patterns:
+      - "id="
+      - "user_id="
+      - "account="
+
+# Storage configuration
+store:
+  sqlite:
+    path: "owaspchecker.db"
+    max_open_conns: 25
+    max_idle_conns: 5
+    conn_max_lifetime: "5m"
+  vacuum:
+    auto: true
+    interval: "24h"
+  retention:
+    requests: "30d"
+    responses: "30d"
+    findings: "1y"
+    events: "7d"
+    artifacts: "90d"
+
+# Report configuration
+report:
+  templates:
+    markdown: "templates/report.md"
+    html: "templates/report.html"
+    json: "templates/report.json"
+  output:
+    include_evidence: true
+    include_timeline: true
+    include_statistics: true
+    severity_colors:
+      critical: "#FF0000"
+      high: "#FF6600"
+      medium: "#FFCC00"
+      low: "#00CC00"
+      info: "#0066CC"
+
+# Session configuration
+session:
+  cookie_jar:
+    persistent: true
+    file: "cookies.json"
+  csrf:
+    auto_extract: true
+    token_patterns:
+      - "name=\"csrf_token\""
+      - "name=\"_token\""
+      - "name=\"authenticity_token\""
+  headers:
+    default:
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+      Accept-Language: "en-US,en;q=0.5"
+      Accept-Encoding: "gzip, deflate"
+      Connection: "keep-alive"
+      Upgrade-Insecure-Requests: "1"
+
+# Crawl configuration
+crawl:
+  enabled: false
+  max_depth: 3
+  max_pages: 100
+  respect_robots: true
+  delay: "1s"
+  user_agent: "OWASPChecker/1.0"
+  allowed_domains: []
+  excluded_patterns:
+    - "logout"
+    - "admin"
+    - "delete"
+
+# Plugin configuration
+plugins:
+  directory: "plugins"
+  auto_load: true
+  enabled: []
+  disabled: []
+
+# Logging configuration
+logging:
+  level: "info"
+  format: "json"
+  output: "stdout"
+  file:
+    enabled: false
+    path: "owaspchecker.log"
+    max_size: "100MB"
+    max_backups: 5
+    max_age: "30d"
+
+# Security guards
+security:
+  dangerous_payloads:
+    xxe: false
+    ssrf: false
+    cmdi: false
+  scope_guard:
+    enabled: true
+    base_url: ""
+    allowed_domains: []
+  rate_limit:
+    enabled: true
+    requests_per_second: 10
+  robots_respect:
+    enabled: false
+  legal_banner: true
+  audit_log: true
