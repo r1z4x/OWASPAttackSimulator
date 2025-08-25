@@ -1,8 +1,8 @@
-# OWASPChecker Architecture
+# OWASPAttackSimulator Architecture
 
 ## Overview
 
-OWASPChecker is a comprehensive security testing framework built with a microservices architecture. It consists of a Go-based core engine, TypeScript GUI runner, gRPC communication layer, and SQLite persistence layer.
+OWASPAttackSimulator is a comprehensive security testing framework built with a microservices architecture. It consists of a Go-based core engine, TypeScript GUI runner, gRPC communication layer, and SQLite persistence layer.
 
 ## Architecture Diagram
 
@@ -55,9 +55,9 @@ OWASPChecker is a comprehensive security testing framework built with a microser
 
 **Key Commands**:
 ```bash
-owaspchecker session connect --target <url>
-owaspchecker run scenario --file <scenario.yaml>
-owaspchecker export report --format md --out report.md
+simulation session connect --target <url>
+simulation run scenario --file <scenario.yaml>
+simulation export report --format md --out report.md
 ```
 
 ### 2. GUI Runner (`apps/gui-runner`)
@@ -273,8 +273,8 @@ Step Execution → Event Bus → gRPC Stream → GUI/CLI → Real-time Updates
 ### 1. Single Binary
 
 ```bash
-go build -o owaspchecker ./apps/cli
-./owaspchecker
+go build -o simulation ./apps/cli
+./simulation
 ```
 
 ### 2. Docker Containers

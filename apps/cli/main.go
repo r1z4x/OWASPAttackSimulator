@@ -10,9 +10,9 @@ import (
 
 func main() {
 	rootCmd := &cobra.Command{
-		Use:   "owaspchecker",
+		Use:   "simulation",
 		Short: "OWASP Security Testing Framework",
-		Long: `OWASPChecker is a scenario-based security testing framework that provides
+		Long: `OWASPAttackSimulator is a scenario-based security testing framework that provides
 infinite-step attack infrastructure with GUI/CLI support, gRPC broker,
 and comprehensive OWASP vulnerability detection.`,
 		Version:           "1.0.0",

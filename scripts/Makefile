@@ -1,7 +1,7 @@
-# OWASPChecker Makefile
+# OWASPAttackSimulator Makefile
 
 # Variables
-BINARY_NAME=owaspchecker
+BINARY_NAME=simulation
 CLI_BINARY=apps/cli/$(BINARY_NAME)
 GUI_RUNNER_DIR=apps/gui-runner
 PROTO_DIR=api/proto
@@ -20,7 +20,7 @@ BUILD_TIME=$(shell date -u '+%Y-%m-%d_%H:%M:%S')
 LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 
 # Docker variables
-DOCKER_REGISTRY?=owaspchecker
+DOCKER_REGISTRY?=simulation
 DOCKER_TAG?=latest
 
 # Default target
@@ -40,7 +40,7 @@ dev: proto
 # Build targets
 .PHONY: build
 build: proto
-	@echo "Building OWASPChecker..."
+	@echo "Building OWASPAttackSimulator..."
 	$(GO) build $(LDFLAGS) -o $(CLI_BINARY) ./apps/cli
 	@echo "Build complete: $(CLI_BINARY)"
 
@@ -155,7 +155,7 @@ fmt:
 # Install targets
 .PHONY: install
 install: build
-	@echo "Installing OWASPChecker..."
+	@echo "Installing OWASPAttackSimulator..."
 	$(GO) install ./apps/cli
 
 .PHONY: install-deps
@@ -223,7 +223,7 @@ plugin-list:
 # Run targets
 .PHONY: run
 run: build
-	@echo "Running OWASPChecker..."
+	@echo "Running OWASPAttackSimulator..."
 	./$(CLI_BINARY)
 
 .PHONY: run-scenario

@@ -1,4 +1,4 @@
-# OWASPChecker Quick Start Guide
+# OWASPAttackSimulator Quick Start Guide
 
 ## 🚀 Get Started in 5 Minutes
 
@@ -14,13 +14,13 @@
 # 1. Clone and build
 git clone https://github.com/owaspchecker/owaspchecker.git
 cd owaspchecker
-go build -o apps/cli/owaspchecker ./apps/cli
+go build -o apps/cli/simulation ./apps/cli
 
 # 2. Test the CLI
-./apps/cli/owaspchecker --help
+./apps/cli/simulation --help
 
 # 3. Run a sample scenario
-./apps/cli/owaspchecker run scenario --file configs/scenarios/login_attack.yaml
+./apps/cli/simulation run scenario --file configs/scenarios/login_attack.yaml
 ```
 
 ### Option 2: Full Development Setup
@@ -63,20 +63,20 @@ docker-compose ps
 
 ```bash
 # Connect to a target
-owaspchecker session connect --target https://target.app
+simulation session connect --target https://target.app
 
 # Check session status
-owaspchecker session status
+simulation session status
 ```
 
 ### 2. Run a Scenario
 
 ```bash
 # Execute a scenario file
-owaspchecker run scenario --file configs/scenarios/login_attack.yaml
+simulation run scenario --file configs/scenarios/login_attack.yaml
 
 # Run with custom variables
-owaspchecker run scenario \
+simulation run scenario \
   --file configs/scenarios/login_attack.yaml \
   --vars base_url=https://target.app \
   --vars username=admin \
@@ -87,23 +87,23 @@ owaspchecker run scenario \
 
 ```bash
 # Import HAR file
-owaspchecker import har --file session.har
+simulation import har --file session.har
 
 # Export security report
-owaspchecker export report --format md --out security_report.md
+simulation export report --format md --out security_report.md
 
 # Export HAR file
-owaspchecker export har --file session.har --filter tag=attack
+simulation export har --file session.har --filter tag=attack
 ```
 
 ### 4. Database Management
 
 ```bash
 # Show database statistics
-owaspchecker db stats
+simulation db stats
 
 # Optimize database
-owaspchecker db vacuum
+simulation db vacuum
 ```
 
 ## 🔧 Configuration

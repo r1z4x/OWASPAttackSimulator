@@ -1,8 +1,8 @@
-# OWASPChecker Scenario DSL
+# OWASPAttackSimulator Scenario DSL
 
 ## Overview
 
-The OWASPChecker Scenario DSL (Domain Specific Language) is a declarative YAML-based language for defining security testing scenarios. It supports infinite-step execution with loops, conditions, variables, and comprehensive attack patterns.
+The OWASPAttackSimulator Scenario DSL (Domain Specific Language) is a declarative YAML-based language for defining security testing scenarios. It supports infinite-step execution with loops, conditions, variables, and comprehensive attack patterns.
 
 ## Basic Structure
 
@@ -173,7 +173,7 @@ Generate request variations for testing.
       methods: "[GET, POST, PUT, DELETE]"
       headers:
         - "X-Forwarded-For: 127.0.0.1"
-        - "User-Agent: OWASPChecker/1.0"
+        - "User-Agent: OWASPAttackSimulator/1.0"
       bodies: "[json, xml, form]"
   timeout: 60s
 ```
@@ -475,7 +475,7 @@ steps:
         timeout: 60s
 
 metadata:
-  author: "OWASPChecker"
+  author: "OWASPAttackSimulator"
   created: "2024-01-01"
   tags: "[login, attack, infinite]"
   risk_level: "high"

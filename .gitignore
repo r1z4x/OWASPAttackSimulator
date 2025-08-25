@@ -18,8 +18,8 @@
 go.work
 
 # Build artifacts
-owaspchecker
-owaspchecker.exe
+simulation
+simulation.exe
 
 # Database files
 *.db
@@ -30,7 +30,7 @@ owaspchecker.exe
 *.log
 
 # Report files
-owaspchecker_report.*
+simulation_report.*
 
 # IDE files
 .vscode/

@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: build/docker/Dockerfile.cli
-    container_name: owaspchecker-cli
+    container_name: simulation-cli
     ports:
       - "50051:50051"
     volumes:
@@ -14,12 +14,12 @@ services:
     environment:
       - OWASPCHECKER_CONFIG=/app/configs/defaults.yaml
       - OWASPCHECKER_DB_PATH=/app/data/owaspchecker.db
-      - OWASPCHECKER_GUI_URL=http://owaspchecker-gui:3000
+      - OWASPCHECKER_GUI_URL=http://simulation-gui:3000
     networks:
-      - owaspchecker-network
+      - simulation-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "./owaspchecker", "--help"]
+      test: ["CMD", "./simulation", "--help"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -30,7 +30,7 @@ services:
     build:
       context: .
       dockerfile: build/docker/Dockerfile.gui
-    container_name: owaspchecker-gui
+    container_name: simulation-gui
     ports:
       - "3000:3000"
       - "9222:9222"
@@ -39,9 +39,9 @@ services:
       - ./configs:/app/configs:ro
     environment:
       - NODE_ENV=production
-      - OWASPCHECKER_BROKER_URL=grpc://cli:50051
+      - OWASPCHECKER_BROKER_URL=grpc://simulation-cli:50051
     networks:
-      - owaspchecker-network
+      - simulation-network
     depends_on:
       cli:
         condition: service_healthy
@@ -58,7 +58,7 @@ services:
     build:
       context: .
       dockerfile: build/docker/Dockerfile.all-in-one
-    container_name: owaspchecker-all-in-one
+    container_name: simulation-all-in-one
     ports:
       - "50052:50051"
       - "3001:3000"
@@ -70,12 +70,12 @@ services:
       - OWASPCHECKER_CONFIG=/app/configs/defaults.yaml
       - OWASPCHECKER_DB_PATH=/app/data/owaspchecker.db
     networks:
-      - owaspchecker-network
+      - simulation-network
     restart: unless-stopped
     profiles:
       - all-in-one
     healthcheck:
-      test: ["CMD", "./bin/owaspchecker", "--help"]
+      test: ["CMD", "./bin/simulation", "--help"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -84,7 +84,7 @@ services:
   # Nginx Reverse Proxy (optional)
   nginx:
     image: nginx:alpine
-    container_name: owaspchecker-nginx
+    container_name: simulation-nginx
     ports:
       - "80:80"
       - "443:443"
@@ -92,7 +92,7 @@ services:
       - ./build/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./build/nginx/ssl:/etc/nginx/ssl:ro
     networks:
-      - owaspchecker-network
+      - simulation-network
     depends_on:
       - cli
       - gui
@@ -103,13 +103,13 @@ services:
   # Redis for caching (optional)
   redis:
     image: redis:7-alpine
-    container_name: owaspchecker-redis
+    container_name: simulation-redis
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
     networks:
-      - owaspchecker-network
+      - simulation-network
     restart: unless-stopped
     profiles:
       - redis
@@ -118,14 +118,14 @@ services:
   # Prometheus for metrics (optional)
   prometheus:
     image: prom/prometheus:latest
-    container_name: owaspchecker-prometheus
+    container_name: simulation-prometheus
     ports:
       - "9090:9090"
     volumes:
       - ./build/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     networks:
-      - owaspchecker-network
+      - simulation-network
     restart: unless-stopped
     profiles:
       - monitoring
@@ -133,7 +133,7 @@ services:
   # Grafana for visualization (optional)
   grafana:
     image: grafana/grafana:latest
-    container_name: owaspchecker-grafana
+    container_name: simulation-grafana
     ports:
       - "3002:3000"
     volumes:
@@ -143,7 +143,7 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     networks:
-      - owaspchecker-network
+      - simulation-network
     depends_on:
       - prometheus
     restart: unless-stopped
@@ -159,7 +159,7 @@ volumes:
     driver: local
 
 networks:
-  owaspchecker-network:
+  simulation-network:
     driver: bridge
     ipam:
       config:

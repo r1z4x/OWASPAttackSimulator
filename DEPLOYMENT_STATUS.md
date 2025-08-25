@@ -1,4 +1,4 @@
-# OWASPChecker Deployment Status
+# OWASPAttackSimulator Deployment Status
 
 ## ✅ **DEPLOYMENT READY** - All Issues Resolved
 
@@ -6,7 +6,7 @@
 
 #### ✅ **CLI Container** - Fully Working
 - ✅ **Build**: `docker-compose build cli` - SUCCESS
-- ✅ **Run**: `docker run --rm owaspchecker-cli:latest` - SUCCESS
+- ✅ **Run**: `docker run --rm simulation-cli:latest` - SUCCESS
 - ✅ **Service**: CLI runs as a long-running service with health checks
 - ✅ **Database**: SQLite database initialization working
 - ✅ **Commands**: All CLI commands functional
@@ -56,8 +56,8 @@
 # Quick start
 git clone <repo>
 cd owaspchecker
-go build -o apps/cli/owaspchecker ./apps/cli
-./apps/cli/owaspchecker --help
+go build -o apps/cli/simulation ./apps/cli
+./apps/cli/simulation --help
 
 # Full setup
 make -f scripts/Makefile install-deps
@@ -78,13 +78,13 @@ docker-compose logs gui
 #### **Individual Containers**
 ```bash
 # CLI only
-docker run --rm owaspchecker-cli:latest
+docker run --rm simulation-cli:latest
 
 # GUI only
-docker run --rm owaspchecker-gui:latest
+docker run --rm simulation-gui:latest
 
 # All-in-one
-docker run --rm owaspchecker-all-in-one:latest
+docker run --rm simulation-all-in-one:latest
 ```
 
 ### 📊 **Current Status**
@@ -126,13 +126,13 @@ docker run --rm owaspchecker-all-in-one:latest
 #### **1. Local Development**
 ```bash
 # Direct execution
-./apps/cli/owaspchecker session connect --target https://example.com
+./apps/cli/simulation session connect --target https://example.com
 ```
 
 #### **2. Docker Single Container**
 ```bash
 # CLI service
-docker run -d --name owaspchecker-cli owaspchecker-cli:latest
+docker run -d --name simulation-cli simulation-cli:latest
 ```
 
 #### **3. Docker Compose Full Stack**
@@ -149,7 +149,7 @@ docker-compose up -d
 
 ### 🎉 **Project Status: DEPLOYMENT READY**
 
-The OWASPChecker project is now **fully ready for deployment** with:
+The OWASPAttackSimulator project is now **fully ready for deployment** with:
 
 - ✅ **Complete Infrastructure**: All Docker containers, build systems, and configurations
 - ✅ **Working Services**: CLI and GUI services running correctly

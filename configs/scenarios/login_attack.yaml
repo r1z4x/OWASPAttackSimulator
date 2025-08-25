@@ -111,7 +111,7 @@ steps:
         timeout: 60s
 
 metadata:
-  author: "OWASPChecker"
+  author: "OWASPAttackSimulator"
   created: "2024-01-01"
   tags: "[login, attack, infinite, session]"
   risk_level: "high"

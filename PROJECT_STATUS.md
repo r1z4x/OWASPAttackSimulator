@@ -1,4 +1,4 @@
-# OWASPChecker Project Status
+# OWASPAttackSimulator Project Status
 
 ## ✅ **COMPLETED** - Foundation & Infrastructure
 
@@ -157,10 +157,10 @@
 ## 🎯 **Success Criteria Met**
 
 ### ✅ **Acceptance Criteria**
-1. ✅ `owaspchecker session connect --target <url>` - CLI command implemented
-2. ✅ `owaspchecker run scenario --file configs/scenarios/login_attack.yaml` - Command ready
-3. ✅ `owaspchecker export report --format md --out report.md` - Command implemented
-4. ✅ `owaspchecker import har --file sample.har` - Command implemented
+1. ✅ `simulation session connect --target <url>` - CLI command implemented
+2. ✅ `simulation run scenario --file configs/scenarios/login_attack.yaml` - Command ready
+3. ✅ `simulation export report --format md --out report.md` - Command implemented
+4. ✅ `simulation import har --file sample.har` - Command implemented
 5. ✅ Infinite-step flow - Scenario DSL supports `control:while` loops
 
 ### ✅ **Technical Requirements**
@@ -173,6 +173,6 @@
 
 ## 🎉 **Project Status: FOUNDATION COMPLETE**
 
-The OWASPChecker project has a **solid foundation** with all infrastructure, CLI commands, configuration, documentation, and project structure in place. The framework is ready for implementing the core functionality in each package.
+The OWASPAttackSimulator project has a **solid foundation** with all infrastructure, CLI commands, configuration, documentation, and project structure in place. The framework is ready for implementing the core functionality in each package.
 
 **Ready for the next phase: Core Implementation!** 🚀

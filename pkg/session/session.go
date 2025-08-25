@@ -60,7 +60,7 @@ func (sm *SessionManager) NewSession(target string, timeout time.Duration) (*Ses
 	}
 
 	// Add default headers
-	session.Headers["User-Agent"] = "OWASPChecker/1.0"
+	session.Headers["User-Agent"] = "OWASPAttackSimulator/1.0"
 	session.Headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
 	session.Headers["Accept-Language"] = "en-US,en;q=0.5"
 	session.Headers["Accept-Encoding"] = "gzip, deflate"

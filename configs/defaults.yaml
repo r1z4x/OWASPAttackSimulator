@@ -1,4 +1,4 @@
-# OWASPChecker Default Configuration
+# OWASPAttackSimulator Default Configuration
 
 # Broker configuration
 broker:
@@ -24,7 +24,7 @@ http:
   rate_limit:
     requests_per_second: 10
     burst_size: 20
-  user_agent: "OWASPChecker/1.0"
+  user_agent: "OWASPAttackSimulator/1.0"
   follow_redirects: true
   max_redirects: 10
 
@@ -163,7 +163,7 @@ checks:
 # Storage configuration
 store:
   sqlite:
-    path: "owaspchecker.db"
+    path: "simulation.db"
     max_open_conns: 25
     max_idle_conns: 5
     conn_max_lifetime: "5m"
@@ -220,7 +220,7 @@ crawl:
   max_pages: 100
   respect_robots: true
   delay: "1s"
-  user_agent: "OWASPChecker/1.0"
+  user_agent: "OWASPAttackSimulator/1.0"
   allowed_domains: []
   excluded_patterns:
     - "logout"
@@ -241,7 +241,7 @@ logging:
   output: "stdout"
   file:
     enabled: false
-    path: "owaspchecker.log"
+    path: "simulation.log"
     max_size: "100MB"
     max_backups: 5
     max_age: "30d"
