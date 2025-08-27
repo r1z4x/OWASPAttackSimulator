@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/fatih/color"
@@ -20,30 +23,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Commands holds all CLI commands
+// Commands represents CLI commands
 type Commands struct {
 	rootCmd *cobra.Command
-	store   *store.SQLiteStore
 	client  *httpx.Client
-}
-
-// NewCommands creates new CLI commands
-func NewCommands() *Commands {
-	store, err := store.NewSQLiteStore("simulation.db")
-	if err != nil {
-		fmt.Printf("Failed to initialize store: %v\n", err)
-		os.Exit(1)
-	}
-
-	client := httpx.NewClient(store)
-
-	cmds := &Commands{
-		store:  store,
-		client: client,
-	}
-
-	cmds.setupCommands()
-	return cmds
+	store   *store.SQLiteStore
 }
 
 // setupCommands sets up all CLI commands
@@ -69,22 +53,39 @@ Examples:
 
 	// Add flags
 	c.rootCmd.Flags().IntP("depth", "d", 3, "Maximum crawl depth (only for URL)")
-	c.rootCmd.Flags().IntP("concurrency", "c", 10, "Number of concurrent requests")
+	c.rootCmd.Flags().IntP("workers", "w", 10, "Number of worker threads")
 	c.rootCmd.Flags().StringP("format", "f", "html", "Report format (html, json)")
 	c.rootCmd.Flags().BoolP("crawl-only", "", false, "Only crawl, don't attack")
 	c.rootCmd.Flags().BoolP("attack-only", "", false, "Only attack, don't crawl")
 	c.rootCmd.Flags().Bool("clean", false, "Clean database before starting new scan")
 	c.rootCmd.Flags().IntP("delay", "", 0, "Delay between requests in milliseconds (for rate limiting tests)")
 	c.rootCmd.Flags().IntP("burst", "", 1, "Number of requests to send in burst before delay")
+	c.rootCmd.Flags().BoolP("debug", "", false, "Enable debug mode to show request/response details")
 }
 
 // runMain handles the main command execution
 func (c *Commands) runMain(cmd *cobra.Command, args []string) error {
-	concurrency, _ := cmd.Flags().GetInt("concurrency")
+	workers, _ := cmd.Flags().GetInt("workers")
 	format, _ := cmd.Flags().GetString("format")
 	clean, _ := cmd.Flags().GetBool("clean")
 	delay, _ := cmd.Flags().GetInt("delay")
 	burst, _ := cmd.Flags().GetInt("burst")
+	debug, _ := cmd.Flags().GetBool("debug")
+
+	// Setup signal handling for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Create context for cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Handle signals in a goroutine with immediate termination
+	go func() {
+		sig := <-sigChan
+		color.Yellow("\n🛑 Received signal %v, terminating immediately...", sig)
+		os.Exit(0)
+	}()
 
 	// If no arguments provided, show help
 	if len(args) == 0 {
@@ -114,7 +115,11 @@ func (c *Commands) runMain(cmd *cobra.Command, args []string) error {
 			color.Yellow("⏱️ Delay between requests: %dms (burst: %d)", delay, burst)
 		}
 
-		if err := c.runAttackURL(input, concurrency, delay, burst); err != nil {
+		if err := c.runAttackURL(ctx, input, workers, delay, burst, debug); err != nil {
+			if ctx.Err() == context.Canceled {
+				color.Yellow("🛑 Attack cancelled by user")
+				return nil
+			}
 			color.Red("❌ Attack failed: %v", err)
 			return fmt.Errorf("attack failed: %w", err)
 		}
@@ -125,10 +130,20 @@ func (c *Commands) runMain(cmd *cobra.Command, args []string) error {
 			color.Yellow("⏱️ Delay between requests: %dms (burst: %d)", delay, burst)
 		}
 
-		if err := c.runAttack(input, concurrency, delay, burst); err != nil {
+		if err := c.runAttack(ctx, input, workers, delay, burst, debug); err != nil {
+			if ctx.Err() == context.Canceled {
+				color.Yellow("🛑 Attack cancelled by user")
+				return nil
+			}
 			color.Red("❌ Attack failed: %v", err)
 			return fmt.Errorf("attack failed: %w", err)
 		}
+	}
+
+	// Check if context was cancelled
+	if ctx.Err() == context.Canceled {
+		color.Yellow("🛑 Scan cancelled by user")
+		return nil
 	}
 
 	// Generate report
@@ -180,7 +195,7 @@ func (c *Commands) runCrawl(baseURL string, depth int) error {
 }
 
 // runAttackURL executes attack directly on a URL
-func (c *Commands) runAttackURL(targetURL string, concurrency int, delay int, burst int) error {
+func (c *Commands) runAttackURL(ctx context.Context, targetURL string, workers int, delay int, burst int, debug bool) error {
 	color.Yellow("🌐 Creating request for URL: %s", targetURL)
 
 	// Create a simple GET request for the URL
@@ -200,29 +215,41 @@ func (c *Commands) runAttackURL(targetURL string, concurrency int, delay int, bu
 	color.Green("✅ Created request for direct URL attack")
 
 	// Create attack engine
-	engine := attack.NewEngine(c.client, c.store, concurrency, delay, burst)
+	engine := attack.NewEngine(c.client, c.store, workers, delay, burst)
+
+	// Set debug mode if enabled
+	if debug {
+		color.Cyan("🐛 Debug mode enabled - showing request/response details")
+		engine.SetDebugMode(true)
+	}
 
 	color.Yellow("⚔️ Starting direct URL attack...")
-	color.Yellow("   🔥 Concurrency: %d", concurrency)
+	color.Yellow("   🔥 Workers: %d", workers)
 	color.Yellow("   📊 Target URL: %s", targetURL)
 
-	// Create progress bar
-	bar := progressbar.NewOptions(len(requests),
-		progressbar.OptionEnableColorCodes(true),
-		progressbar.OptionShowBytes(false),
-		progressbar.OptionSetWidth(50),
-		progressbar.OptionSetDescription("[cyan][1/1][reset] Attacking URL..."),
-		progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        "[green]=[reset]",
-			SaucerHead:    "[green]>[reset]",
-			SaucerPadding: " ",
-			BarStart:      "[",
-			BarEnd:        "]",
-		}),
-	)
+	// Create progress bar (only if not in debug mode)
+	var bar *progressbar.ProgressBar
+	if !debug {
+		bar = progressbar.NewOptions(len(requests),
+			progressbar.OptionEnableColorCodes(true),
+			progressbar.OptionShowBytes(false),
+			progressbar.OptionSetWidth(50),
+			progressbar.OptionSetDescription("[cyan][1/1][reset] Attacking URL..."),
+			progressbar.OptionSetTheme(progressbar.Theme{
+				Saucer:        "[green]=[reset]",
+				SaucerHead:    "[green]>[reset]",
+				SaucerPadding: " ",
+				BarStart:      "[",
+				BarEnd:        "]",
+			}),
+		)
+	}
 
-	result, err := engine.AttackWithProgress(requests, bar)
+	result, err := engine.AttackWithProgress(ctx, requests, bar)
 	if err != nil {
+		if ctx.Err() == context.Canceled {
+			return ctx.Err()
+		}
 		return fmt.Errorf("attack failed: %w", err)
 	}
 
@@ -252,7 +279,7 @@ func (c *Commands) runAttackURL(targetURL string, concurrency int, delay int, bu
 }
 
 // runAttackFromStore attacks requests from the database
-func (c *Commands) runAttackFromStore(concurrency int, delay int, burst int) error {
+func (c *Commands) runAttackFromStore(ctx context.Context, workers int, delay int, burst int) error {
 	color.Yellow("📂 Loading requests from database...")
 
 	// Get requests from store
@@ -269,10 +296,10 @@ func (c *Commands) runAttackFromStore(concurrency int, delay int, burst int) err
 	color.Green("✅ Loaded %d requests from database", len(requests))
 
 	// Create attack engine
-	engine := attack.NewEngine(c.client, c.store, concurrency, delay, burst)
+	engine := attack.NewEngine(c.client, c.store, workers, delay, burst)
 
 	color.Yellow("⚔️ Starting security attack...")
-	color.Yellow("   🔥 Concurrency: %d", concurrency)
+	color.Yellow("   🔥 Workers: %d", workers)
 	color.Yellow("   📊 Total requests to attack: %d", len(requests))
 
 	// Create progress bar
@@ -290,8 +317,11 @@ func (c *Commands) runAttackFromStore(concurrency int, delay int, burst int) err
 		}),
 	)
 
-	result, err := engine.AttackWithProgress(requests, bar)
+	result, err := engine.AttackWithProgress(ctx, requests, bar)
 	if err != nil {
+		if ctx.Err() == context.Canceled {
+			return ctx.Err()
+		}
 		return fmt.Errorf("attack failed: %w", err)
 	}
 
@@ -322,7 +352,7 @@ func (c *Commands) runAttackFromStore(concurrency int, delay int, burst int) err
 }
 
 // runAttack executes the attack operation
-func (c *Commands) runAttack(requestsFile string, concurrency int, delay int, burst int) error {
+func (c *Commands) runAttack(ctx context.Context, requestsFile string, workers int, delay int, burst int, debug bool) error {
 	color.Yellow("📂 Loading requests from file...")
 
 	// Load requests from file
@@ -334,10 +364,16 @@ func (c *Commands) runAttack(requestsFile string, concurrency int, delay int, bu
 	color.Green("✅ Loaded %d requests from file", len(requests))
 
 	// Create attack engine
-	engine := attack.NewEngine(c.client, c.store, concurrency, delay, burst)
+	engine := attack.NewEngine(c.client, c.store, workers, delay, burst)
+
+	// Set debug mode if enabled
+	if debug {
+		color.Cyan("🐛 Debug mode enabled - showing request/response details")
+		engine.SetDebugMode(true)
+	}
 
 	color.Yellow("⚔️ Starting security attack...")
-	color.Yellow("   🔥 Concurrency: %d", concurrency)
+	color.Yellow("   🔥 Workers: %d", workers)
 	color.Yellow("   📊 Total requests to attack: %d", len(requests))
 
 	// Create progress bar
@@ -355,8 +391,11 @@ func (c *Commands) runAttack(requestsFile string, concurrency int, delay int, bu
 		}),
 	)
 
-	result, err := engine.AttackWithProgress(requests, bar)
+	result, err := engine.AttackWithProgress(ctx, requests, bar)
 	if err != nil {
+		if ctx.Err() == context.Canceled {
+			return ctx.Err()
+		}
 		return fmt.Errorf("attack failed: %w", err)
 	}
 
@@ -409,7 +448,6 @@ func (c *Commands) runReport(outputFormat string) error {
 		OutputFormat:    outputFormat,
 		OutputFile:      outputFile,
 		IncludeEvidence: true,
-		GroupBySeverity: true,
 	}
 
 	if err := reporter.GenerateReport(findings, config); err != nil {
@@ -418,26 +456,6 @@ func (c *Commands) runReport(outputFormat string) error {
 
 	color.Green("✅ Report generated: %s", outputFile)
 	color.Green("   📊 Total findings: %d", len(findings))
-
-	// Print summary with colors
-	severityCounts := make(map[common.Severity]int)
-	for _, finding := range findings {
-		severityCounts[finding.Severity]++
-	}
-
-	// Print severity summary with colors
-	for severity, count := range severityCounts {
-		switch severity {
-		case common.SeverityCritical:
-			color.Red("   🚨 Critical: %d", count)
-		case common.SeverityHigh:
-			color.Magenta("   ⚠️  High: %d", count)
-		case common.SeverityMedium:
-			color.Yellow("   ⚡ Medium: %d", count)
-		case common.SeverityLow:
-			color.Blue("   ℹ️  Low: %d", count)
-		}
-	}
 
 	// Print OWASP category summary
 	color.Cyan("\n📊 OWASP Top 10 Categories:")

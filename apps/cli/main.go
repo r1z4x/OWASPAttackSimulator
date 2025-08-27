@@ -3,12 +3,24 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/owaspattacksimulator/apps/cli/cmd"
 	"github.com/spf13/cobra"
 )
 
 func main() {
+	// Setup aggressive signal handling for immediate termination
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+
+	go func() {
+		sig := <-sigChan
+		fmt.Printf("\n🛑 Received signal %v, terminating immediately...\n", sig)
+		os.Exit(0)
+	}()
+
 	rootCmd := &cobra.Command{
 		Use:   "simulation",
 		Short: "OWASP Security Testing Framework",

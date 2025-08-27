@@ -68,7 +68,6 @@ func (s *SQLiteStore) initTables() error {
 			response_id TEXT NOT NULL,
 			type TEXT NOT NULL,
 			category TEXT NOT NULL,
-			severity TEXT NOT NULL,
 			title TEXT NOT NULL,
 			description TEXT,
 			evidence TEXT,
@@ -128,10 +127,10 @@ func (s *SQLiteStore) StoreResponse(resp *common.RecordedResponse) error {
 
 // StoreFinding stores a finding
 func (s *SQLiteStore) StoreFinding(finding *common.Finding) error {
-	query := `INSERT INTO findings (id, request_id, response_id, type, category, severity, title, description, evidence, payload, url, method, timestamp)
-			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	query := `INSERT INTO findings (id, request_id, response_id, type, category, title, description, evidence, payload, url, method, timestamp)
+			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	_, err := s.db.Exec(query, finding.ID, finding.RequestID, finding.ResponseID, finding.Type, finding.Category, finding.Severity, finding.Title, finding.Description, finding.Evidence, finding.Payload, finding.URL, finding.Method, finding.Timestamp)
+	_, err := s.db.Exec(query, finding.ID, finding.RequestID, finding.ResponseID, finding.Type, finding.Category, finding.Title, finding.Description, finding.Evidence, finding.Payload, finding.URL, finding.Method, finding.Timestamp)
 	if err != nil {
 		return fmt.Errorf("failed to store finding: %w", err)
 	}
@@ -199,7 +198,7 @@ func (s *SQLiteStore) GetResponses() ([]common.RecordedResponse, error) {
 
 // GetFindings retrieves all findings
 func (s *SQLiteStore) GetFindings() ([]common.Finding, error) {
-	query := `SELECT id, request_id, response_id, type, category, severity, title, description, evidence, payload, url, method, timestamp FROM findings ORDER BY timestamp`
+	query := `SELECT id, request_id, response_id, type, category, title, description, evidence, payload, url, method, timestamp FROM findings ORDER BY timestamp`
 	rows, err := s.db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query findings: %w", err)
@@ -209,7 +208,7 @@ func (s *SQLiteStore) GetFindings() ([]common.Finding, error) {
 	var findings []common.Finding
 	for rows.Next() {
 		var finding common.Finding
-		err := rows.Scan(&finding.ID, &finding.RequestID, &finding.ResponseID, &finding.Type, &finding.Category, &finding.Severity, &finding.Title, &finding.Description, &finding.Evidence, &finding.Payload, &finding.URL, &finding.Method, &finding.Timestamp)
+		err := rows.Scan(&finding.ID, &finding.RequestID, &finding.ResponseID, &finding.Type, &finding.Category, &finding.Title, &finding.Description, &finding.Evidence, &finding.Payload, &finding.URL, &finding.Method, &finding.Timestamp)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan finding: %w", err)
 		}

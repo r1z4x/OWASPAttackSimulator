@@ -14,13 +14,14 @@ import (
 
 // Engine represents the attack engine
 type Engine struct {
-	concurrency   int
+	workers       int
 	timeout       time.Duration
 	mutator       *mutate.Mutator
 	client        *httpx.Client
 	totalRequests int
 	currentAttack string // Current attack type being processed
 	UI            *UI    // Enhanced UI interface
+	debug         bool   // Debug mode flag
 }
 
 // AttackConfig represents attack configuration
@@ -62,17 +63,23 @@ type Vulnerability struct {
 }
 
 // NewEngine creates a new attack engine
-func NewEngine(concurrency int, timeout time.Duration) *Engine {
+func NewEngine(workers int, timeout time.Duration) *Engine {
 	useColors := CheckTerminalSupport()
 	return &Engine{
-		concurrency:   concurrency,
+		workers:       workers,
 		timeout:       timeout,
 		mutator:       mutate.NewMutator(),
 		client:        httpx.NewClient(timeout),
 		totalRequests: 0,
 		currentAttack: "",
 		UI:            NewUI(useColors, true, false),
+		debug:         false,
 	}
+}
+
+// SetDebugMode enables or disables debug mode
+func (e *Engine) SetDebugMode(debug bool) {
+	e.debug = debug
 }
 
 // RunAttack performs the attack
@@ -81,7 +88,7 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 
 	// Print enhanced banner and header
 	e.UI.PrintBanner()
-	e.UI.PrintHeader(config, e.concurrency)
+	e.UI.PrintHeader(config, e.workers)
 
 	// Set default parameters if not provided
 	if len(config.Parameters) == 0 {
@@ -91,21 +98,8 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 	// Debug: Print parameters being used
 	fmt.Printf("🔍 Using parameters: %v\n", config.Parameters)
 
-	// Calculate total requests
-	if len(config.PayloadSets) == 0 || (len(config.PayloadSets) == 1 && config.PayloadSets[0] == "all") {
-		allPayloads := e.mutator.GetAllPayloads()
-		totalPayloads := 0
-		for _, payloads := range allPayloads {
-			totalPayloads += len(payloads)
-		}
-		e.totalRequests = len(config.Parameters) * totalPayloads
-	} else {
-		e.totalRequests = len(config.Parameters) * len(config.PayloadSets) * 5
-	}
-
-	if e.totalRequests == 0 {
-		e.totalRequests = 1
-	}
+	// Calculate total requests - we'll calculate this properly after generating work
+	e.totalRequests = 0
 
 	// Create work channel and result channel
 	workChan := make(chan AttackWork, e.totalRequests)
@@ -113,26 +107,36 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 
 	// Start workers
 	var wg sync.WaitGroup
-	fmt.Printf("🔧 Starting %d worker threads\n", e.concurrency)
-	for i := 0; i < e.concurrency; i++ {
+	fmt.Printf("🔧 Starting %d worker threads\n", e.workers)
+
+	// If workers is 1, use sequential processing for better delay control
+	if e.workers == 1 {
 		wg.Add(1)
-		go e.worker(&wg, workChan, resultChan, httpx.Request{
+		go e.sequentialWorker(&wg, workChan, resultChan, httpx.Request{
 			Method:  config.Method,
 			URL:     config.Target,
 			Headers: config.Headers,
 		}, config.Delay)
+	} else {
+		for i := 0; i < e.workers; i++ {
+			wg.Add(1)
+			go e.worker(&wg, workChan, resultChan, httpx.Request{
+				Method:  config.Method,
+				URL:     config.Target,
+				Headers: config.Headers,
+			}, config.Delay)
+		}
 	}
 
-	// Collect results
-	var totalRequests int
+	// Collect results and findings
 	var mu sync.Mutex
 	var completedRequests int
 	var rateLimited bool
+	var allFindings []common.Finding
 
 	go func() {
 		for resp := range resultChan {
 			mu.Lock()
-			totalRequests++
 			completedRequests++
 
 			// Update current attack type from response if available
@@ -140,10 +144,18 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 				e.currentAttack = resp.AttackType
 			}
 
-			// Check for rate limiting
-			if resp != nil && (isRateLimited(resp.StatusCode) || containsRateLimitMessage(string(resp.Body)) || containsRateLimitHeaders(resp.Headers)) {
-				rateLimited = true
+			// Collect findings from response
+			if resp != nil {
+				findings := e.analyzeResponseForFindings(resp)
+				if len(findings) > 0 {
+					allFindings = append(allFindings, findings...)
+				}
 			}
+
+			// Check for rate limiting
+			//if resp != nil && (isRateLimited(resp.StatusCode) || containsRateLimitMessage(string(resp.Body)) || containsRateLimitHeaders(resp.Headers)) {
+			//	rateLimited = true
+			//}
 
 			// Show progress every 5 requests or when completed
 			if completedRequests%5 == 0 || completedRequests == e.totalRequests {
@@ -158,7 +170,7 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 		}
 	}()
 
-	// Generate attack work
+	// Generate attack work and calculate total requests
 	if len(config.PayloadSets) == 0 || (len(config.PayloadSets) == 1 && config.PayloadSets[0] == "all") {
 		e.generateAllPayloadWork(config.Parameters, workChan)
 	} else {
@@ -175,9 +187,10 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 
 	result := &AttackResult{
 		Target:          config.Target,
-		TotalRequests:   totalRequests,
+		TotalRequests:   completedRequests,
 		Vulnerabilities: []Vulnerability{},
 		Duration:        duration,
+		Findings:        allFindings, // Add collected findings
 	}
 
 	// Print enhanced summary
@@ -190,6 +203,13 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 func (e *Engine) generateAllPayloadWork(parameters []string, workChan chan<- AttackWork) {
 	// Get all available attack types from mutator
 	allPayloads := e.mutator.GetAllPayloads()
+
+	// Calculate total requests
+	totalRequests := 0
+	for _, payloads := range allPayloads {
+		totalRequests += len(parameters) * len(payloads)
+	}
+	e.totalRequests = totalRequests
 
 	for attackType, payloads := range allPayloads {
 		// Update current attack type for progress display
@@ -269,12 +289,16 @@ func (e *Engine) generateSpecificPayloadWork(parameters []string, payloadSet str
 	payloads := e.mutator.GetPayloadsForType(common.AttackType(attackType))
 	fmt.Printf("📦 Loading payload set: %s (%d payloads)\n", payloadSet, len(payloads))
 
+	// Calculate total requests for this payload set
+	e.totalRequests = len(parameters) * len(payloads)
+
 	for _, parameter := range parameters {
 		for _, payload := range payloads {
 			work := AttackWork{
-				Parameter: parameter,
-				Payload:   payload.Value,
-				Type:      string(payload.Type),
+				Parameter:  parameter,
+				Payload:    payload.Value,
+				Type:       string(payload.Type),
+				AttackType: attackType, // Add attack type to work
 			}
 			workChan <- work
 		}
@@ -308,10 +332,27 @@ func (e *Engine) worker(wg *sync.WaitGroup, workChan <-chan AttackWork, resultCh
 		// Add the payload parameter
 		req.Params[work.Parameter] = work.Payload
 
+		// Show debug information if enabled
+		if e.debug {
+			fmt.Printf("\n🔍 [DEBUG] Testing: %s %s\n", req.Method, req.URL)
+			fmt.Printf("   Parameter: %s\n", work.Parameter)
+			fmt.Printf("   Payload: %s\n", work.Payload)
+			fmt.Printf("   Attack Type: %s\n", work.AttackType)
+			if len(req.Headers) > 0 {
+				fmt.Printf("   Headers: %v\n", req.Headers)
+			}
+			if len(req.Params) > 0 {
+				fmt.Printf("   Params: %v\n", req.Params)
+			}
+		}
+
 		// Send request
 		ctx := context.Background()
 		resp, err := e.client.DoRequest(ctx, &req)
 		if err != nil {
+			if e.debug {
+				fmt.Printf("   ❌ [DEBUG] Request failed: %v\n", err)
+			}
 			// Silent error handling
 			continue
 		}
@@ -321,6 +362,22 @@ func (e *Engine) worker(wg *sync.WaitGroup, workChan <-chan AttackWork, resultCh
 			resp.Parameter = work.Parameter
 			resp.Payload = work.Payload
 			resp.AttackType = work.AttackType // Add attack type to response
+			resp.Method = req.Method          // Add method to response
+
+			// Show response debug information if enabled
+			if e.debug {
+				fmt.Printf("   📡 [DEBUG] Response: %d (Size: %d bytes)\n", resp.StatusCode, len(resp.Body))
+				if len(resp.Headers) > 0 {
+					fmt.Printf("   Response Headers: %v\n", resp.Headers)
+				}
+				if len(resp.Body) > 0 {
+					bodyStr := string(resp.Body)
+					if len(bodyStr) > 200 {
+						bodyStr = bodyStr[:200] + "..."
+					}
+					fmt.Printf("   Response Body: %s\n", bodyStr)
+				}
+			}
 		}
 
 		// Send result with non-blocking channel write
@@ -333,225 +390,431 @@ func (e *Engine) worker(wg *sync.WaitGroup, workChan <-chan AttackWork, resultCh
 
 		// Apply delay between requests if specified
 		if delay > 0 {
+			if e.debug {
+				fmt.Printf("   ⏳ [DEBUG] Applying delay of %dms between requests\n", delay)
+			}
 			time.Sleep(time.Duration(delay) * time.Millisecond)
 		}
 	}
 }
 
-// checkVulnerabilities checks response for vulnerabilities
-func (e *Engine) checkVulnerabilities(resp *httpx.Response, work AttackWork) *httpx.Response {
-	// Basic vulnerability checking logic
-	// This should be enhanced with proper security checks
-	if work.Type == "xss" && containsXSS(string(resp.Body), work.Payload) {
-		// XSS detected
-		fmt.Printf("⚠️  XSS vulnerability detected in parameter %s\n", work.Parameter)
-	} else if work.Type == "sqli" && containsSQLi(string(resp.Body)) {
-		// SQL Injection detected
-		fmt.Printf("⚠️  SQL Injection vulnerability detected in parameter %s\n", work.Parameter)
-	} else if work.Type == "ssrf" && containsSSRF(string(resp.Body)) {
-		// SSRF detected
-		fmt.Printf("⚠️  SSRF vulnerability detected in parameter %s\n", work.Parameter)
-	}
+// sequentialWorker processes attack work sequentially (for single thread mode)
+func (e *Engine) sequentialWorker(wg *sync.WaitGroup, workChan <-chan AttackWork, resultChan chan<- *httpx.Response, baseRequest httpx.Request, delay int) {
+	defer wg.Done()
 
-	return resp
-}
-
-// Helper functions for vulnerability detection
-func containsXSS(body, payload string) bool {
-	return len(body) > 0 && len(payload) > 0
-}
-
-func containsSQLi(body string) bool {
-	sqlPatterns := []string{"sql syntax", "mysql error", "oracle error", "postgresql error"}
-	for _, pattern := range sqlPatterns {
-		if contains(body, pattern) {
-			return true
+	for work := range workChan {
+		// Create request with payload - use a copy to avoid concurrent map access
+		req := httpx.Request{
+			Method:  baseRequest.Method,
+			URL:     baseRequest.URL,
+			Headers: make(map[string]string),
+			Body:    baseRequest.Body,
+			Params:  make(map[string]string),
 		}
-	}
-	return false
-}
 
-func containsSSRF(body string) bool {
-	ssrfPatterns := []string{"127.0.0.1", "localhost", "169.254.169.254"}
-	for _, pattern := range ssrfPatterns {
-		if contains(body, pattern) {
-			return true
+		// Copy headers safely
+		for k, v := range baseRequest.Headers {
+			req.Headers[k] = v
 		}
-	}
-	return false
-}
 
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr))
-}
-
-// getOWASPCategory maps attack type to OWASP category
-func getOWASPCategory(attackType string) common.OWASPCategory {
-	switch attackType {
-	case "xss", "sqli", "ldap.injection", "nosql.injection", "command.injection":
-		return common.OWASPCategoryA03Injection
-	case "broken.access.control", "idor", "privilege.escalation":
-		return common.OWASPCategoryA01BrokenAccessControl
-	case "weak.crypto", "weak.hashing", "insecure.transport":
-		return common.OWASPCategoryA02CryptographicFailures
-	case "business.logic.flaw", "race.condition":
-		return common.OWASPCategoryA04InsecureDesign
-	case "default.credentials", "debug.mode", "verbose.errors", "missing.headers", "weak.cors":
-		return common.OWASPCategoryA05SecurityMisconfiguration
-	case "known.vulnerability", "outdated.component", "version.disclosure":
-		return common.OWASPCategoryA03Injection // Fallback to injection
-	case "weak.auth", "session.fixation", "session.timeout", "weak.password", "brute.force":
-		return common.OWASPCategoryA01BrokenAccessControl // Fallback to access control
-	case "insecure.deserialization", "code.injection":
-		return common.OWASPCategoryA03Injection // Fallback to injection
-	case "log.injection", "log.bypass", "audit.tampering":
-		return common.OWASPCategoryA03Injection // Fallback to injection
-	case "ssrf", "xxe":
-		return common.OWASPCategoryA03Injection // Fallback to injection
-	default:
-		return common.OWASPCategoryA03Injection
-	}
-}
-
-// determineSeverity determines severity based on status code and attack type
-func determineSeverity(statusCode int, attackType string) common.Severity {
-	// High severity for error responses
-	if statusCode >= 500 {
-		return common.SeverityHigh
-	}
-
-	// Medium severity for client errors
-	if statusCode >= 400 {
-		return common.SeverityMedium
-	}
-
-	// Low severity for successful responses
-	return common.SeverityLow
-}
-
-// isRateLimited checks if the response indicates rate limiting
-func isRateLimited(statusCode int) bool {
-	// Common rate limiting status codes used by various services
-	rateLimitCodes := []int{
-		429, // Too Many Requests (RFC 6585)
-		403, // Forbidden (often used for rate limiting)
-		503, // Service Unavailable (often used for rate limiting)
-		509, // Bandwidth Limit Exceeded
-		420, // Enhance Your Calm (Twitter API)
-		498, // Invalid Token (often used for rate limiting)
-		499, // Client Closed Request (sometimes used for rate limiting)
-	}
-
-	for _, code := range rateLimitCodes {
-		if statusCode == code {
-			return true
+		// Copy params safely
+		for k, v := range baseRequest.Params {
+			req.Params[k] = v
 		}
-	}
-	return false
-}
 
-// containsRateLimitMessage checks if response body contains rate limiting messages
-func containsRateLimitMessage(body string) bool {
-	// Common rate limiting messages used by various services
-	rateLimitMessages := []string{
-		"rate limit",
-		"rate limited",
-		"too many requests",
-		"quota exceeded",
-		"throttled",
-		"rate exceeded",
-		"request limit",
-		"api limit",
-		"usage limit",
-		"bandwidth limit",
-		"rate limiting",
-		"slow down",
-		"enhance your calm",
-		"try again later",
-		"service temporarily unavailable",
-		"temporarily blocked",
-		"access denied",
-		"forbidden",
-		"blocked",
-		"you are being rate limited",
-	}
+		// Add the payload parameter
+		req.Params[work.Parameter] = work.Payload
 
-	bodyLower := strings.ToLower(body)
-	for _, message := range rateLimitMessages {
-		if strings.Contains(bodyLower, message) {
-			return true
+		// Show debug information if enabled
+		if e.debug {
+			fmt.Printf("\n🔍 [DEBUG] Testing: %s %s\n", req.Method, req.URL)
+			fmt.Printf("   Parameter: %s\n", work.Parameter)
+			fmt.Printf("   Payload: %s\n", work.Payload)
+			fmt.Printf("   Attack Type: %s\n", work.AttackType)
+			if len(req.Headers) > 0 {
+				fmt.Printf("   Headers: %v\n", req.Headers)
+			}
+			if len(req.Params) > 0 {
+				fmt.Printf("   Params: %v\n", req.Params)
+			}
 		}
-	}
-	return false
-}
 
-// containsRateLimitHeaders checks if response headers contain rate limiting indicators
-func containsRateLimitHeaders(headers map[string]string) bool {
-	// Common rate limiting header names and values
-	rateLimitHeaders := map[string][]string{
-		"x-ratelimit-remaining":       {"0", "false", "exceeded"},
-		"x-ratelimit-limit":           {"0", "exceeded"},
-		"x-ratelimit-reset":           {"0", "exceeded"},
-		"retry-after":                 {"0", "exceeded"},
-		"x-rate-limit-remaining":      {"0", "false", "exceeded"},
-		"x-rate-limit-limit":          {"0", "exceeded"},
-		"x-rate-limit-reset":          {"0", "exceeded"},
-		"x-throttle-remaining":        {"0", "false", "exceeded"},
-		"x-throttle-limit":            {"0", "exceeded"},
-		"x-quota-remaining":           {"0", "false", "exceeded"},
-		"x-quota-limit":               {"0", "exceeded"},
-		"x-api-limit-remaining":       {"0", "false", "exceeded"},
-		"x-api-limit-limit":           {"0", "exceeded"},
-		"x-usage-limit-remaining":     {"0", "false", "exceeded"},
-		"x-usage-limit-limit":         {"0", "exceeded"},
-		"x-request-limit-remaining":   {"0", "false", "exceeded"},
-		"x-request-limit-limit":       {"0", "exceeded"},
-		"x-bandwidth-limit-remaining": {"0", "false", "exceeded"},
-		"x-bandwidth-limit-limit":     {"0", "exceeded"},
-	}
+		// Send request
+		ctx := context.Background()
+		resp, err := e.client.DoRequest(ctx, &req)
+		if err != nil {
+			if e.debug {
+				fmt.Printf("   ❌ [DEBUG] Request failed: %v\n", err)
+			}
+			// Silent error handling
+			continue
+		}
 
-	// Check for rate limiting headers
-	for headerName, headerValues := range rateLimitHeaders {
-		if headerValue, exists := headers[headerName]; exists {
-			headerValueLower := strings.ToLower(headerValue)
-			for _, expectedValue := range headerValues {
-				if strings.Contains(headerValueLower, expectedValue) {
-					return true
+		// Add attack information to response
+		if resp != nil {
+			resp.Parameter = work.Parameter
+			resp.Payload = work.Payload
+			resp.AttackType = work.AttackType // Add attack type to response
+			resp.Method = req.Method          // Add method to response
+
+			// Show response debug information if enabled
+			if e.debug {
+				fmt.Printf("   📡 [DEBUG] Response: %d (Size: %d bytes)\n", resp.StatusCode, len(resp.Body))
+				if len(resp.Headers) > 0 {
+					fmt.Printf("   Response Headers: %v\n", resp.Headers)
+				}
+				if len(resp.Body) > 0 {
+					bodyStr := string(resp.Body)
+					if len(bodyStr) > 200 {
+						bodyStr = bodyStr[:200] + "..."
+					}
+					fmt.Printf("   Response Body: %s\n", bodyStr)
 				}
 			}
 		}
+
+		// Send result with non-blocking channel write
+		select {
+		case resultChan <- resp:
+			// Result sent successfully
+		default:
+			// Channel is full, skip this result
+		}
+
+		// Apply delay between requests if specified (always applied in sequential mode)
+		if delay > 0 {
+			if e.debug {
+				fmt.Printf("   ⏳ [DEBUG] Applying delay of %dms between requests (sequential mode)\n", delay)
+			}
+			time.Sleep(time.Duration(delay) * time.Millisecond)
+		}
+	}
+}
+
+// getOWASPCategoryForAttackType returns the appropriate OWASP category for an attack type
+func (e *Engine) getOWASPCategoryForAttackType(attackType string) common.OWASPCategory {
+	switch attackType {
+	// A01:2021 - Broken Access Control
+	case string(common.AttackBrokenAccessControl), string(common.AttackIDOR),
+		string(common.AttackPrivilegeEscalation), string(common.AttackJWTManipulation):
+		return common.OWASPCategoryA01BrokenAccessControl
+
+	// A02:2021 - Cryptographic Failures
+	case string(common.AttackWeakCrypto), string(common.AttackWeakHashing),
+		string(common.AttackInsecureTransport), string(common.AttackWeakRandomness):
+		return common.OWASPCategoryA02CryptographicFailures
+
+	// A03:2021 - Injection
+	case string(common.AttackXSS), string(common.AttackSQLi), string(common.AttackCommandInj),
+		string(common.AttackLDAPInjection), string(common.AttackNoSQLInjection),
+		string(common.AttackHeaderInjection), string(common.AttackTemplateInjection):
+		return common.OWASPCategoryA03Injection
+
+	// A04:2021 - Insecure Design
+	case string(common.AttackBusinessLogicFlaw), string(common.AttackRaceCondition),
+		string(common.AttackInsecureWorkflow):
+		return common.OWASPCategoryA04InsecureDesign
+
+	// A05:2021 - Security Misconfiguration
+	case string(common.AttackDefaultCredentials), string(common.AttackDebugMode),
+		string(common.AttackVerboseErrors), string(common.AttackMissingHeaders),
+		string(common.AttackWeakCORS):
+		return common.OWASPCategoryA05SecurityMisconfiguration
+
+	// A06:2021 - Vulnerable and Outdated Components
+	case string(common.AttackKnownVulnerability), string(common.AttackOutdatedComponent),
+		string(common.AttackVersionDisclosure):
+		return common.OWASPCategoryA06VulnerableComponents
+
+	// A07:2021 - Identification and Authentication Failures
+	case string(common.AttackWeakAuth), string(common.AttackSessionFixation),
+		string(common.AttackSessionTimeout), string(common.AttackWeakPassword),
+		string(common.AttackBruteForce):
+		return common.OWASPCategoryA07AuthFailures
+
+	// A08:2021 - Software and Data Integrity Failures
+	case string(common.AttackInsecureDeserialization), string(common.AttackCodeInjection),
+		string(common.AttackSupplyChainAttack):
+		return common.OWASPCategoryA08SoftwareDataIntegrity
+
+	// A09:2021 - Security Logging and Monitoring Failures
+	case string(common.AttackLogInjection), string(common.AttackLogBypass),
+		string(common.AttackAuditTrailTampering):
+		return common.OWASPCategoryA09LoggingFailures
+
+	// A10:2021 - Server-Side Request Forgery
+	case string(common.AttackSSRF), string(common.AttackXXE), string(common.AttackOpenRedirect):
+		return common.OWASPCategoryA10SSRF
+
+	default:
+		return common.OWASPCategoryA05SecurityMisconfiguration
+	}
+}
+
+// getVariantForPayload returns the variant name for a given payload
+func (e *Engine) getVariantForPayload(attackType string, payload string) string {
+	if e.debug {
+		fmt.Printf("🔍 [DEBUG] getVariantForPayload: attackType=%s, payload=%s\n", attackType, payload)
 	}
 
-	// Check for rate limiting header names (case insensitive)
-	rateLimitHeaderNames := []string{
-		"x-ratelimit-remaining",
-		"x-ratelimit-limit",
-		"x-ratelimit-reset",
-		"retry-after",
-		"x-rate-limit-remaining",
-		"x-rate-limit-limit",
-		"x-rate-limit-reset",
-		"x-throttle-remaining",
-		"x-throttle-limit",
-		"x-quota-remaining",
-		"x-quota-limit",
-		"x-api-limit-remaining",
-		"x-api-limit-limit",
-		"x-usage-limit-remaining",
-		"x-usage-limit-limit",
-		"x-request-limit-remaining",
-		"x-request-limit-limit",
-		"x-bandwidth-limit-remaining",
-		"x-bandwidth-limit-limit",
+	// Get all payloads for this attack type
+	payloads := e.mutator.GetPayloadsForType(common.AttackType(attackType))
+
+	if e.debug {
+		fmt.Printf("🔍 [DEBUG] Found %d payloads for attack type %s\n", len(payloads), attackType)
 	}
 
-	for _, headerName := range rateLimitHeaderNames {
-		for actualHeaderName := range headers {
-			if strings.EqualFold(actualHeaderName, headerName) {
+	// Find the payload and return its variant
+	for _, p := range payloads {
+		if p.Value == payload {
+			if e.debug {
+				fmt.Printf("🔍 [DEBUG] Found variant: %s\n", p.Variant)
+			}
+			return p.Variant
+		}
+	}
+
+	// If not found, return a default variant name
+	if e.debug {
+		fmt.Printf("🔍 [DEBUG] Variant not found, returning unknown_variant\n")
+	}
+	return "unknown_variant"
+}
+
+// analyzeResponseForFindings analyzes a response and returns findings
+func (e *Engine) analyzeResponseForFindings(resp *httpx.Response) []common.Finding {
+	var findings []common.Finding
+
+	if resp == nil {
+		return findings
+	}
+
+	// Get the correct OWASP category for this attack type
+	category := e.getOWASPCategoryForAttackType(resp.AttackType)
+
+	// Get the variant name for this payload
+	variant := e.getVariantForPayload(resp.AttackType, resp.Payload)
+
+	// Analyze response for security indicators
+	blocked := e.isBlocked(resp)
+	rateLimited := e.isRateLimited(resp)
+	forbidden := e.isForbidden(resp)
+	serverError := e.isServerError(resp)
+
+	// Create a basic finding for each response
+	finding := common.Finding{
+		ID:             fmt.Sprintf("response_%d_%s", resp.StatusCode, resp.AttackType),
+		Type:           variant,  // Use variant name instead of generic type
+		Category:       category, // Use correct OWASP category
+		Title:          fmt.Sprintf("%s - %s", variant, resp.AttackType),
+		Description:    fmt.Sprintf("Tested %s variant for %s attack type", variant, resp.AttackType),
+		Evidence:       e.generateEvidence(resp, blocked, rateLimited, forbidden, serverError),
+		Payload:        resp.Payload,
+		URL:            resp.URL,
+		Method:         resp.Method,
+		ResponseStatus: resp.StatusCode,
+		ResponseSize:   int64(len(resp.Body)),
+		ResponseTime:   resp.Duration,
+		Blocked:        blocked,
+		RateLimited:    rateLimited,
+		Forbidden:      forbidden,
+		ServerError:    serverError,
+		Timestamp:      time.Now(),
+	}
+	findings = append(findings, finding)
+
+	return findings
+}
+
+// isBlocked checks if the response indicates WAF/IPS blocking
+func (e *Engine) isBlocked(resp *httpx.Response) bool {
+	// Check for common WAF/IPS blocking indicators
+	blockedStatusCodes := []int{403, 406, 429, 444, 499, 502, 503, 504}
+	for _, code := range blockedStatusCodes {
+		if resp.StatusCode == code {
+			return true
+		}
+	}
+
+	// Check response body for blocking indicators
+	bodyStr := strings.ToLower(string(resp.Body))
+	blockingKeywords := []string{
+		"blocked", "forbidden", "access denied", "security violation",
+		"waf", "firewall", "ips", "intrusion", "malicious", "suspicious",
+		"request blocked", "security policy", "threat detected",
+		"cloudflare", "akamai", "imperva", "f5", "barracuda",
+	}
+	for _, keyword := range blockingKeywords {
+		if strings.Contains(bodyStr, keyword) {
+			return true
+		}
+	}
+
+	// Check headers for blocking indicators
+	for headerName, headerValue := range resp.Headers {
+		headerStr := strings.ToLower(headerName + ": " + headerValue)
+		for _, keyword := range blockingKeywords {
+			if strings.Contains(headerStr, keyword) {
 				return true
 			}
 		}
 	}
 
 	return false
+}
+
+// isRateLimited checks if the response indicates rate limiting
+func (e *Engine) isRateLimited(resp *httpx.Response) bool {
+	// Check for rate limiting status codes
+	if resp.StatusCode == 429 {
+		return true
+	}
+
+	// Check response body for rate limiting indicators
+	bodyStr := strings.ToLower(string(resp.Body))
+	rateLimitKeywords := []string{
+		"rate limit", "rate limiting", "too many requests", "throttled",
+		"quota exceeded", "request limit", "try again later", "slow down",
+		"rate exceeded", "limit exceeded", "too frequent",
+	}
+	for _, keyword := range rateLimitKeywords {
+		if strings.Contains(bodyStr, keyword) {
+			return true
+		}
+	}
+
+	// Check headers for rate limiting indicators
+	for headerName, headerValue := range resp.Headers {
+		headerStr := strings.ToLower(headerName + ": " + headerValue)
+		for _, keyword := range rateLimitKeywords {
+			if strings.Contains(headerStr, keyword) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// isForbidden checks if the response indicates forbidden access
+func (e *Engine) isForbidden(resp *httpx.Response) bool {
+	// Check status codes
+	if resp.StatusCode == 403 || resp.StatusCode == 401 {
+		return true
+	}
+
+	// Check response body for forbidden indicators
+	bodyStr := strings.ToLower(string(resp.Body))
+	forbiddenPatterns := []string{
+		"forbidden", "access denied", "unauthorized", "permission denied",
+		"insufficient privileges", "access restricted", "not authorized",
+		"authentication required", "login required", "credentials required",
+		"access control", "authorization failed", "permission error",
+	}
+
+	for _, pattern := range forbiddenPatterns {
+		if strings.Contains(bodyStr, pattern) {
+			return true
+		}
+	}
+
+	// Check headers for authentication requirements
+	for headerName := range resp.Headers {
+		headerLower := strings.ToLower(headerName)
+		if headerLower == "www-authenticate" || headerLower == "proxy-authenticate" {
+			return true
+		}
+		if headerLower == "x-auth-required" || headerLower == "x-access-denied" {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isServerError checks if the response indicates server error
+func (e *Engine) isServerError(resp *httpx.Response) bool {
+	// Check status codes
+	if resp.StatusCode >= 500 && resp.StatusCode < 600 {
+		return true
+	}
+
+	// Check response body for server error indicators
+	bodyStr := strings.ToLower(string(resp.Body))
+	serverErrorPatterns := []string{
+		"internal server error", "server error", "application error",
+		"runtime error", "fatal error", "critical error", "system error",
+		"database error", "connection error", "timeout error",
+		"service unavailable", "bad gateway", "gateway timeout",
+		"http 500", "http 502", "http 503", "http 504", "http 505",
+		"error occurred", "an error occurred", "something went wrong",
+		"technical difficulties", "maintenance mode", "under maintenance",
+	}
+
+	for _, pattern := range serverErrorPatterns {
+		if strings.Contains(bodyStr, pattern) {
+			return true
+		}
+	}
+
+	// Check for specific error patterns in different frameworks
+	frameworkErrorPatterns := []string{
+		"asp.net", "php fatal", "java exception", "python traceback",
+		"ruby error", "node.js error", "express error", "django error",
+		"flask error", "spring error", "hibernate error", "jdbc error",
+		"mysql error", "postgresql error", "oracle error", "sql server error",
+	}
+
+	for _, pattern := range frameworkErrorPatterns {
+		if strings.Contains(bodyStr, pattern) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// hasUnusualResponsePattern checks for unusual response patterns
+func (e *Engine) hasUnusualResponsePattern(resp *httpx.Response) bool {
+	// Check for very large responses (potential data dump)
+	if len(resp.Body) > 100000 {
+		return true
+	}
+
+	// Check for very small responses (potential error)
+	if len(resp.Body) < 100 && resp.StatusCode != 204 {
+		return true
+	}
+
+	// Check for unusual content types
+	contentType := resp.Headers["content-type"]
+	if contentType != "" && !strings.Contains(strings.ToLower(contentType), "text/html") {
+		return true
+	}
+
+	return false
+}
+
+// generateEvidence generates evidence based on response analysis
+func (e *Engine) generateEvidence(resp *httpx.Response, blocked, rateLimited, forbidden, serverError bool) string {
+	var evidence []string
+
+	if blocked {
+		evidence = append(evidence, "WAF/IPS blocking detected")
+	}
+	if rateLimited {
+		evidence = append(evidence, "Rate limiting detected")
+	}
+	if forbidden {
+		evidence = append(evidence, "Access forbidden")
+	}
+	if serverError {
+		evidence = append(evidence, "Server error response")
+	}
+
+	if len(evidence) == 0 {
+		return fmt.Sprintf("HTTP %d response received", resp.StatusCode)
+	}
+
+	return strings.Join(evidence, "; ")
 }

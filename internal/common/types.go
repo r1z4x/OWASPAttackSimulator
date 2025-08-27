@@ -1,6 +1,9 @@
 package common
 
 import (
+	"fmt"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -15,6 +18,7 @@ type RecordedRequest struct {
 	Variant     string            `json:"variant"`
 	Timestamp   time.Time         `json:"timestamp"`
 	Source      string            `json:"source"` // "crawl" or "har" or "json"
+	Raw         string            `json:"raw"`    // Raw HTTP request like Burp Suite
 }
 
 // RecordedResponse represents a captured HTTP response
@@ -29,16 +33,16 @@ type RecordedResponse struct {
 	Duration    time.Duration     `json:"duration"`
 	Timestamp   time.Time         `json:"timestamp"`
 	Hash        string            `json:"hash"`
+	Raw         string            `json:"raw"` // Raw HTTP response like Burp Suite
 }
 
-// Finding represents a security vulnerability finding
+// Finding represents a request-response result
 type Finding struct {
 	ID             string        `json:"id"`
 	RequestID      string        `json:"request_id"`
 	ResponseID     string        `json:"response_id"`
-	Type           string        `json:"type"`     // "xss", "sqli", "xxe", "ssrf", etc.
+	Type           string        `json:"type"`     // "original_request", "mutated_request", "xss", "sqli", etc.
 	Category       OWASPCategory `json:"category"` // OWASP category
-	Severity       Severity      `json:"severity"`
 	Title          string        `json:"title"`
 	Description    string        `json:"description"`
 	Evidence       string        `json:"evidence"`
@@ -53,17 +57,9 @@ type Finding struct {
 	Forbidden      bool          `json:"forbidden"`    // 403/401 detected
 	ServerError    bool          `json:"server_error"` // 5xx errors
 	Timestamp      time.Time     `json:"timestamp"`
+	RequestRaw     string        `json:"request_raw"`  // Raw HTTP request
+	ResponseRaw    string        `json:"response_raw"` // Raw HTTP response
 }
-
-// Severity represents the severity level of a finding
-type Severity string
-
-const (
-	SeverityLow      Severity = "low"
-	SeverityMedium   Severity = "medium"
-	SeverityHigh     Severity = "high"
-	SeverityCritical Severity = "critical"
-)
 
 // OWASP Category represents OWASP Top 10 categories
 type OWASPCategory string
@@ -167,7 +163,7 @@ type AttackResult struct {
 	OriginalRequests []RecordedRequest  `json:"original_requests"`
 	MutatedRequests  []RecordedRequest  `json:"mutated_requests"`
 	Responses        []RecordedResponse `json:"responses"`
-	Findings         []Finding          `json:"findings"`
+	Findings         []Finding          `json:"findings"` // All request-response results
 	StartTime        time.Time          `json:"start_time"`
 	EndTime          time.Time          `json:"end_time"`
 }
@@ -177,5 +173,101 @@ type ReportConfig struct {
 	OutputFormat    string `json:"output_format"` // "markdown", "html", "json"
 	OutputFile      string `json:"output_file"`
 	IncludeEvidence bool   `json:"include_evidence"`
-	GroupBySeverity bool   `json:"group_by_severity"`
+}
+
+// GenerateRawRequest generates raw HTTP request format like Burp Suite
+func (r *RecordedRequest) GenerateRawRequest() string {
+	var raw strings.Builder
+
+	// Parse URL to get path and query
+	parsedURL, err := url.Parse(r.URL)
+	if err != nil {
+		return ""
+	}
+
+	// Build request line
+	path := parsedURL.Path
+	if parsedURL.RawQuery != "" {
+		path += "?" + parsedURL.RawQuery
+	}
+	raw.WriteString(fmt.Sprintf("%s %s HTTP/1.1\n", r.Method, path))
+
+	// Add headers
+	if host := parsedURL.Host; host != "" {
+		raw.WriteString(fmt.Sprintf("Host: %s\n", host))
+	}
+
+	for key, value := range r.Headers {
+		raw.WriteString(fmt.Sprintf("%s: %s\n", key, value))
+	}
+
+	// Add empty line to separate headers from body
+	raw.WriteString("\n")
+
+	// Add body if exists
+	if r.Body != "" {
+		raw.WriteString(r.Body)
+	}
+
+	return raw.String()
+}
+
+// GenerateRawResponse generates raw HTTP response format like Burp Suite
+func (r *RecordedResponse) GenerateRawResponse() string {
+	var raw strings.Builder
+
+	// Build status line
+	statusText := getStatusText(r.StatusCode)
+	raw.WriteString(fmt.Sprintf("HTTP/1.1 %d %s\n", r.StatusCode, statusText))
+
+	// Add headers
+	for key, value := range r.Headers {
+		raw.WriteString(fmt.Sprintf("%s: %s\n", key, value))
+	}
+
+	// Add empty line to separate headers from body
+	raw.WriteString("\n")
+
+	// Add body if exists
+	if r.Body != "" {
+		raw.WriteString(r.Body)
+	}
+
+	return raw.String()
+}
+
+// getStatusText returns HTTP status text for status code
+func getStatusText(statusCode int) string {
+	switch statusCode {
+	case 200:
+		return "OK"
+	case 201:
+		return "Created"
+	case 204:
+		return "No Content"
+	case 301:
+		return "Moved Permanently"
+	case 302:
+		return "Found"
+	case 304:
+		return "Not Modified"
+	case 400:
+		return "Bad Request"
+	case 401:
+		return "Unauthorized"
+	case 403:
+		return "Forbidden"
+	case 404:
+		return "Not Found"
+	case 405:
+		return "Method Not Allowed"
+	case 500:
+		return "Internal Server Error"
+	case 502:
+		return "Bad Gateway"
+	case 503:
+		return "Service Unavailable"
+	default:
+		return "Unknown"
+	}
 }

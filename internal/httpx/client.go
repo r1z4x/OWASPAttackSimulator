@@ -59,6 +59,9 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 	}
 
+	// Generate raw HTTP request format
+	recordedReq.Raw = recordedReq.GenerateRawRequest()
+
 	// Store the request
 	if err := c.store.StoreRequest(recordedReq); err != nil {
 		return nil, fmt.Errorf("failed to store request: %w", err)
@@ -93,6 +96,9 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		recordedResp.Hash = generateHash(bodyBytes)
 		resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 	}
+
+	// Generate raw HTTP response format
+	recordedResp.Raw = recordedResp.GenerateRawResponse()
 
 	// Store the response
 	if err := c.store.StoreResponse(recordedResp); err != nil {

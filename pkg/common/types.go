@@ -2,9 +2,10 @@ package common
 
 import (
 	"context"
+	"fmt"
+	"net/url"
+	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // Request represents an HTTP request
@@ -17,19 +18,21 @@ type Request struct {
 	ContentType string            `json:"content_type"`
 	Variant     string            `json:"variant"`
 	Timestamp   time.Time         `json:"timestamp"`
+	Raw         string            `json:"raw"` // Raw HTTP request like Burp Suite
 }
 
 // Response represents an HTTP response
 type Response struct {
-	ID           string            `json:"id"`
-	RequestID    string            `json:"request_id"`
-	Status       int               `json:"status"`
-	Headers      map[string]string `json:"headers"`
-	BodySnippet  string            `json:"body_snippet"`
-	BodyHash     string            `json:"body_hash"`
-	Duration     time.Duration     `json:"duration"`
-	Timestamp    time.Time         `json:"timestamp"`
-	RedirectURL  string            `json:"redirect_url,omitempty"`
+	ID          string            `json:"id"`
+	RequestID   string            `json:"request_id"`
+	Status      int               `json:"status"`
+	Headers     map[string]string `json:"headers"`
+	BodySnippet string            `json:"body_snippet"`
+	BodyHash    string            `json:"body_hash"`
+	Duration    time.Duration     `json:"duration"`
+	Timestamp   time.Time         `json:"timestamp"`
+	RedirectURL string            `json:"redirect_url,omitempty"`
+	Raw         string            `json:"raw"` // Raw HTTP response like Burp Suite
 }
 
 // Finding represents a security finding
@@ -38,23 +41,11 @@ type Finding struct {
 	RequestID  string            `json:"request_id"`
 	Category   string            `json:"category"`
 	Title      string            `json:"title"`
-	Severity   Severity          `json:"severity"`
 	Evidence   string            `json:"evidence"`
 	Tags       map[string]string `json:"tags"`
 	Timestamp  time.Time         `json:"timestamp"`
 	Confidence float64           `json:"confidence"`
 }
-
-// Severity levels
-type Severity string
-
-const (
-	SeverityInfo     Severity = "info"
-	SeverityLow      Severity = "low"
-	SeverityMedium   Severity = "medium"
-	SeverityHigh     Severity = "high"
-	SeverityCritical Severity = "critical"
-)
 
 // Session represents a browser session
 type Session struct {
@@ -109,12 +100,12 @@ type Step struct {
 
 // StepStatus represents the status of a step execution
 type StepStatus struct {
-	StepID        string    `json:"step_id"`
-	Status        string    `json:"status"`
-	ErrorMessage  string    `json:"error_message"`
-	StartedAt     time.Time `json:"started_at"`
-	CompletedAt   time.Time `json:"completed_at"`
-	Results       map[string]interface{} `json:"results"`
+	StepID       string                 `json:"step_id"`
+	Status       string                 `json:"status"`
+	ErrorMessage string                 `json:"error_message"`
+	StartedAt    time.Time              `json:"started_at"`
+	CompletedAt  time.Time              `json:"completed_at"`
+	Results      map[string]interface{} `json:"results"`
 }
 
 // Scenario represents a complete scenario
@@ -129,11 +120,11 @@ type Scenario struct {
 
 // ExecutionConfig represents scenario execution configuration
 type ExecutionConfig struct {
-	Concurrency   int      `json:"concurrency"`
+	Workers       int           `json:"workers"`
 	Timeout       time.Duration `json:"timeout"`
-	DryRun        bool     `json:"dry_run"`
-	EnabledSteps  []string `json:"enabled_steps"`
-	DisabledSteps []string `json:"disabled_steps"`
+	DryRun        bool          `json:"dry_run"`
+	EnabledSteps  []string      `json:"enabled_steps"`
+	DisabledSteps []string      `json:"disabled_steps"`
 }
 
 // MutationConfig represents request mutation configuration
@@ -167,7 +158,6 @@ type Store interface {
 	GetFinding(ctx context.Context, id string) (*Finding, error)
 	ListFindings(ctx context.Context, filter map[string]string) ([]*Finding, error)
 	GetFindingsByCategory(ctx context.Context, category string) ([]*Finding, error)
-	GetFindingsBySeverity(ctx context.Context, severity Severity) ([]*Finding, error)
 
 	// Session operations
 	SaveSession(ctx context.Context, session *Session) error
@@ -210,29 +200,29 @@ type Engine interface {
 
 // AttackJob represents a job to be executed by the engine
 type AttackJob struct {
-	ID           string            `json:"id"`
-	SessionID    string            `json:"session_id"`
-	Target       *Request          `json:"target"`
-	Mutation     *MutationConfig   `json:"mutation"`
-	Checks       *CheckConfig      `json:"checks"`
-	Concurrency  int               `json:"concurrency"`
-	RateLimit    string            `json:"rate_limit"`
-	Timeout      time.Duration     `json:"timeout"`
-	RetryPolicy  *RetryPolicy      `json:"retry_policy"`
-	Metadata     map[string]string `json:"metadata"`
+	ID          string            `json:"id"`
+	SessionID   string            `json:"session_id"`
+	Target      *Request          `json:"target"`
+	Mutation    *MutationConfig   `json:"mutation"`
+	Checks      *CheckConfig      `json:"checks"`
+	Workers     int               `json:"workers"`
+	RateLimit   string            `json:"rate_limit"`
+	Timeout     time.Duration     `json:"timeout"`
+	RetryPolicy *RetryPolicy      `json:"retry_policy"`
+	Metadata    map[string]string `json:"metadata"`
 }
 
 // JobStatus represents the status of an attack job
 type JobStatus struct {
-	JobID        string    `json:"job_id"`
-	Status       string    `json:"status"`
-	Progress     float64   `json:"progress"`
-	TotalJobs    int       `json:"total_jobs"`
-	CompletedJobs int      `json:"completed_jobs"`
-	FailedJobs   int       `json:"failed_jobs"`
-	StartedAt    time.Time `json:"started_at"`
-	CompletedAt  time.Time `json:"completed_at"`
-	Error        string    `json:"error"`
+	JobID         string    `json:"job_id"`
+	Status        string    `json:"status"`
+	Progress      float64   `json:"progress"`
+	TotalJobs     int       `json:"total_jobs"`
+	CompletedJobs int       `json:"completed_jobs"`
+	FailedJobs    int       `json:"failed_jobs"`
+	StartedAt     time.Time `json:"started_at"`
+	CompletedAt   time.Time `json:"completed_at"`
+	Error         string    `json:"error"`
 }
 
 // RetryPolicy represents retry configuration
@@ -290,54 +280,102 @@ type RunnerStatus struct {
 	Error       string    `json:"error"`
 }
 
-// Utility functions
-func NewID() string {
-	return uuid.New().String()
-}
+// Utility functions for context management
+// Note: These functions are not currently used but may be needed for future features
 
-func NewTimestamp() time.Time {
-	return time.Now().UTC()
-}
+// GenerateRawRequest generates raw HTTP request format like Burp Suite
+func (r *Request) GenerateRawRequest() string {
+	var raw strings.Builder
 
-// Context keys
-type contextKey string
-
-const (
-	SessionIDKey contextKey = "session_id"
-	StepIDKey    contextKey = "step_id"
-	JobIDKey     contextKey = "job_id"
-)
-
-// Context helpers
-func WithSessionID(ctx context.Context, sessionID string) context.Context {
-	return context.WithValue(ctx, SessionIDKey, sessionID)
-}
-
-func GetSessionID(ctx context.Context) string {
-	if id, ok := ctx.Value(SessionIDKey).(string); ok {
-		return id
+	// Parse URL to get path and query
+	parsedURL, err := url.Parse(r.URL)
+	if err != nil {
+		return ""
 	}
-	return ""
-}
 
-func WithStepID(ctx context.Context, stepID string) context.Context {
-	return context.WithValue(ctx, StepIDKey, stepID)
-}
-
-func GetStepID(ctx context.Context) string {
-	if id, ok := ctx.Value(StepIDKey).(string); ok {
-		return id
+	// Build request line
+	path := parsedURL.Path
+	if parsedURL.RawQuery != "" {
+		path += "?" + parsedURL.RawQuery
 	}
-	return ""
-}
+	raw.WriteString(fmt.Sprintf("%s %s HTTP/1.1\n", r.Method, path))
 
-func WithJobID(ctx context.Context, jobID string) context.Context {
-	return context.WithValue(ctx, JobIDKey, jobID)
-}
-
-func GetJobID(ctx context.Context) string {
-	if id, ok := ctx.Value(JobIDKey).(string); ok {
-		return id
+	// Add headers
+	if host := parsedURL.Host; host != "" {
+		raw.WriteString(fmt.Sprintf("Host: %s\n", host))
 	}
-	return ""
+
+	for key, value := range r.Headers {
+		raw.WriteString(fmt.Sprintf("%s: %s\n", key, value))
+	}
+
+	// Add empty line to separate headers from body
+	raw.WriteString("\n")
+
+	// Add body if exists
+	if len(r.Body) > 0 {
+		raw.WriteString(string(r.Body))
+	}
+
+	return raw.String()
+}
+
+// GenerateRawResponse generates raw HTTP response format like Burp Suite
+func (r *Response) GenerateRawResponse() string {
+	var raw strings.Builder
+
+	// Build status line
+	statusText := getStatusText(r.Status)
+	raw.WriteString(fmt.Sprintf("HTTP/1.1 %d %s\n", r.Status, statusText))
+
+	// Add headers
+	for key, value := range r.Headers {
+		raw.WriteString(fmt.Sprintf("%s: %s\n", key, value))
+	}
+
+	// Add empty line to separate headers from body
+	raw.WriteString("\n")
+
+	// Add body if exists
+	if r.BodySnippet != "" {
+		raw.WriteString(r.BodySnippet)
+	}
+
+	return raw.String()
+}
+
+// getStatusText returns HTTP status text for status code
+func getStatusText(statusCode int) string {
+	switch statusCode {
+	case 200:
+		return "OK"
+	case 201:
+		return "Created"
+	case 204:
+		return "No Content"
+	case 301:
+		return "Moved Permanently"
+	case 302:
+		return "Found"
+	case 304:
+		return "Not Modified"
+	case 400:
+		return "Bad Request"
+	case 401:
+		return "Unauthorized"
+	case 403:
+		return "Forbidden"
+	case 404:
+		return "Not Found"
+	case 405:
+		return "Method Not Allowed"
+	case 500:
+		return "Internal Server Error"
+	case 502:
+		return "Bad Gateway"
+	case 503:
+		return "Service Unavailable"
+	default:
+		return "Unknown"
+	}
 }

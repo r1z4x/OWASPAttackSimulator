@@ -30,7 +30,7 @@ http:
 
 # Engine configuration
 engine:
-  concurrency:
+  workers:
     default: 8
     max: 32
   queues:
@@ -187,12 +187,6 @@ report:
     include_evidence: true
     include_timeline: true
     include_statistics: true
-    severity_colors:
-      critical: "#FF0000"
-      high: "#FF6600"
-      medium: "#FFCC00"
-      low: "#00CC00"
-      info: "#0066CC"
 
 # Session configuration
 session:

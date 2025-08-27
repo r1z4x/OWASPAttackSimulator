@@ -179,7 +179,7 @@ simulation export report --format md --out report.md
 -- Core tables
 requests(id, method, url, headers_json, body_blob, content_type, variant, ts)
 responses(id, request_id, status, headers_json, body_snippet, body_hash, duration_ms, ts)
-findings(id, request_id, category, title, severity, evidence, tags_json, ts)
+findings(id, request_id, category, title, evidence, tags_json, ts)
 sessions(id, cookies_json, headers_json, csrf_token, storage_json, ts)
 events(id, step_id, kind, payload_json, ts)
 artifacts(id, step_id, kind, path, meta_json, ts)
@@ -194,7 +194,6 @@ artifacts(id, step_id, kind, path, meta_json, ts)
 - **HTML**: Interactive web reports
 - **JSON**: Machine-readable data
 - **Timeline**: Chronological event view
-- **Statistics**: Severity and category summaries
 
 ## Data Flow
 

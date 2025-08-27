@@ -13,18 +13,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// InteractiveCLI provides an enhanced interactive interface
+// InteractiveCLI provides an interactive command-line interface
 type InteractiveCLI struct {
 	scanner *bufio.Scanner
 	engine  *engine.Engine
 }
 
-// NewInteractiveCLI creates a new interactive CLI instance
-func NewInteractiveCLI() *InteractiveCLI {
-	return &InteractiveCLI{
+// Start starts the interactive CLI
+func Start() {
+	ic := &InteractiveCLI{
 		scanner: bufio.NewScanner(os.Stdin),
 		engine:  engine.NewEngine(3, 30*time.Second),
 	}
+	ic.showMainMenu()
 }
 
 // Run starts the interactive CLI
@@ -130,8 +131,8 @@ func (ic *InteractiveCLI) quickAttack() {
 		payloadSet = "all"
 	}
 
-	// Get concurrency
-	yellow.Printf("   🚀 Concurrency (1-10): ")
+	// Get workers
+	yellow.Printf("   🚀 Workers (1-10): ")
 	white.Printf("(default: 3)\n   ")
 	concurrencyStr := ic.getUserInput()
 	concurrency := 3
@@ -145,7 +146,7 @@ func (ic *InteractiveCLI) quickAttack() {
 	yellow.Printf("\n   📋 Attack Summary:\n")
 	white.Printf("      Target: %s\n", target)
 	white.Printf("      Attack Type: %s\n", payloadSet)
-	white.Printf("      Concurrency: %d\n", concurrency)
+	white.Printf("      Workers: %d\n", concurrency)
 
 	yellow.Printf("\n   ⚠️  Are you sure you want to proceed? (y/N): ")
 	confirm := ic.getUserInput()
@@ -170,7 +171,7 @@ func (ic *InteractiveCLI) runAttack(target, payloadSet string, concurrency int) 
 		Headers:     make(map[string]string),
 	}
 
-	// Create new engine with user-specified concurrency
+	// Create new engine with user-specified workers
 	attackEngine := engine.NewEngine(concurrency, 30*time.Second)
 
 	// Run the attack

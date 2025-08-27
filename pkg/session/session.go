@@ -12,6 +12,12 @@ import (
 	"github.com/owaspattacksimulator/pkg/httpx"
 )
 
+// SessionManager manages browser sessions
+type SessionManager struct {
+	sessions map[string]*Session
+	mutex    sync.RWMutex
+}
+
 // Session represents a browser session
 type Session struct {
 	ID        string
@@ -22,19 +28,6 @@ type Session struct {
 	Storage   map[string]interface{}
 	CreatedAt time.Time
 	mu        sync.RWMutex
-}
-
-// SessionManager manages multiple sessions
-type SessionManager struct {
-	sessions map[string]*Session
-	mu       sync.RWMutex
-}
-
-// NewSessionManager creates a new session manager
-func NewSessionManager() *SessionManager {
-	return &SessionManager{
-		sessions: make(map[string]*Session),
-	}
 }
 
 // NewSession creates a new session
@@ -67,25 +60,25 @@ func (sm *SessionManager) NewSession(target string, timeout time.Duration) (*Ses
 	session.Headers["Connection"] = "keep-alive"
 
 	// Store session
-	sm.mu.Lock()
+	sm.mutex.Lock()
 	sm.sessions[session.ID] = session
-	sm.mu.Unlock()
+	sm.mutex.Unlock()
 
 	return session, nil
 }
 
 // GetSession retrieves a session by ID
 func (sm *SessionManager) GetSession(id string) (*Session, bool) {
-	sm.mu.RLock()
-	defer sm.mu.RUnlock()
+	sm.mutex.RLock()
+	defer sm.mutex.RUnlock()
 	session, exists := sm.sessions[id]
 	return session, exists
 }
 
 // CloseSession closes and removes a session
 func (sm *SessionManager) CloseSession(id string) error {
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
 
 	if _, exists := sm.sessions[id]; !exists {
 		return fmt.Errorf("session not found: %s", id)
@@ -97,8 +90,8 @@ func (sm *SessionManager) CloseSession(id string) error {
 
 // ListSessions returns all active sessions
 func (sm *SessionManager) ListSessions() []*Session {
-	sm.mu.RLock()
-	defer sm.mu.RUnlock()
+	sm.mutex.RLock()
+	defer sm.mutex.RUnlock()
 
 	sessions := make([]*Session, 0, len(sm.sessions))
 	for _, session := range sm.sessions {

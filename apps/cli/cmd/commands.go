@@ -40,6 +40,7 @@ func AddAttackCommand(rootCmd *cobra.Command) {
 			workers, _ := cmd.Flags().GetInt("workers")
 			timeoutStr, _ := cmd.Flags().GetString("timeout")
 			generateReport, _ := cmd.Flags().GetBool("report")
+			debug, _ := cmd.Flags().GetBool("debug")
 
 			if target == "" {
 				return fmt.Errorf("target URL is required")
@@ -53,6 +54,12 @@ func AddAttackCommand(rootCmd *cobra.Command) {
 
 			// Create attack engine with enhanced UI
 			attackEngine := engine.NewEngine(workers, timeout)
+
+			// Set debug mode if enabled
+			if debug {
+				fmt.Println("🐛 Debug mode enabled - showing request/response details")
+				attackEngine.SetDebugMode(true)
+			}
 
 			// Prepare attack configuration
 			config := &engine.AttackConfig{
@@ -69,13 +76,13 @@ func AddAttackCommand(rootCmd *cobra.Command) {
 			}
 
 			// Show enhanced results
-			showEnhancedResults(result)
+			// showEnhancedResults(result) // This function is removed
 
 			// Generate HTML report if requested
 			if generateReport {
 				fmt.Println("\n📊 Generating HTML report...")
 				findings := convertAttackResultToFindings(result, target)
-				reportFile := fmt.Sprintf("attack_report_%s.html", time.Now().Format("20060102_150405"))
+				reportFile := fmt.Sprintf("reports/attack_report_%s.html", time.Now().Format("20060102_150405"))
 
 				// Use the existing reporter structure
 				reporter := report.NewReporter()
@@ -83,7 +90,6 @@ func AddAttackCommand(rootCmd *cobra.Command) {
 					OutputFormat:    "html",
 					OutputFile:      reportFile,
 					IncludeEvidence: true,
-					GroupBySeverity: true,
 				}
 
 				err := reporter.GenerateReport(findings, config)
@@ -105,87 +111,21 @@ func AddAttackCommand(rootCmd *cobra.Command) {
 	attackCmd.Flags().String("timeout", "30s", "Attack timeout")
 	attackCmd.Flags().Bool("report", true, "Generate HTML report after attack")
 	attackCmd.Flags().String("report-format", "html", "Report format (html, json, text)")
+	attackCmd.Flags().Bool("debug", false, "Enable debug mode to show request/response details")
 	attackCmd.MarkFlagRequired("target")
 
 	rootCmd.AddCommand(attackCmd)
 }
 
-// showEnhancedResults displays enhanced attack results
-func showEnhancedResults(result *engine.AttackResult) {
-	// Results are already shown by the engine's UI
-	// This function can be used for additional result processing if needed
-}
-
 // convertAttackResultToFindings converts attack result to findings format
 func convertAttackResultToFindings(result *engine.AttackResult, target string) []common.Finding {
-	var findings []common.Finding
+	// Debug: Print findings count
+	fmt.Printf("🔍 Converting attack result to findings...\n")
+	fmt.Printf("📊 Total findings found: %d\n", len(result.Findings))
 
-	// If vulnerabilities were found, convert them to findings
-	if len(result.Vulnerabilities) > 0 {
-		for i, vuln := range result.Vulnerabilities {
-			finding := common.Finding{
-				ID:             fmt.Sprintf("finding_%03d", i+1),
-				Type:           vuln.Type,
-				Category:       common.OWASPCategoryA03Injection, // Default category
-				Severity:       determineSeverity(vuln.Type),
-				Title:          fmt.Sprintf("%s vulnerability detected", vuln.Type),
-				Description:    fmt.Sprintf("%s vulnerability detected in parameter %s", vuln.Type, vuln.Parameter),
-				Evidence:       vuln.Evidence,
-				Payload:        vuln.Payload,
-				URL:            vuln.URL,
-				Method:         "GET", // Default method
-				ResponseStatus: vuln.StatusCode,
-				ResponseSize:   int64(1024), // Default size
-				ResponseTime:   time.Duration(150 * time.Millisecond),
-				Blocked:        false,
-				RateLimited:    false,
-				Timestamp:      time.Now(),
-			}
-			findings = append(findings, finding)
-		}
-	} else {
-		// Create a summary finding if no vulnerabilities found
-		finding := common.Finding{
-			ID:             "summary_001",
-			Type:           "Security Scan",
-			Category:       common.OWASPCategoryA01BrokenAccessControl, // Default category
-			Severity:       common.SeverityLow,
-			Title:          "Security scan completed",
-			Description:    fmt.Sprintf("Security scan completed for %s. No vulnerabilities detected.", target),
-			Evidence:       "All tested payloads were properly handled by the target",
-			Payload:        "N/A",
-			URL:            target,
-			Method:         "GET",
-			ResponseStatus: 200,
-			ResponseSize:   int64(result.TotalRequests * 100), // Estimate
-			ResponseTime:   result.Duration,
-			Blocked:        false,
-			RateLimited:    false,
-			Timestamp:      time.Now(),
-		}
-		findings = append(findings, finding)
-	}
-
-	return findings
-}
-
-// determineSeverity determines severity based on vulnerability type
-func determineSeverity(vulnType string) common.Severity {
-	switch strings.ToLower(vulnType) {
-	case "sqli", "rce", "xxe":
-		return common.SeverityCritical
-	case "xss", "ssrf", "idor":
-		return common.SeverityHigh
-	case "open_redirect", "csrf":
-		return common.SeverityMedium
-	default:
-		return common.SeverityLow
-	}
-}
-
-// AddQuickCommand adds the quick command directly to root (removed)
-func AddQuickCommand(rootCmd *cobra.Command) {
-	// Quick command removed - use attack command instead
+	// Return the findings directly from the attack result
+	// These are already in the correct format
+	return result.Findings
 }
 
 // AddScenarioCommand adds the scenario command directly to root
@@ -200,6 +140,7 @@ func AddScenarioCommand(rootCmd *cobra.Command) {
 			workers, _ := cmd.Flags().GetInt("workers")
 			timeout, _ := cmd.Flags().GetString("timeout")
 			delay, _ := cmd.Flags().GetInt("delay")
+			debug, _ := cmd.Flags().GetBool("debug")
 
 			if file == "" {
 				return fmt.Errorf("scenario file is required")
@@ -248,8 +189,13 @@ func AddScenarioCommand(rootCmd *cobra.Command) {
 				ui.PrintInfo(fmt.Sprintf("⏳ Using command line delay: %dms", scenarioDelay))
 			}
 
+			// Show debug mode status
+			if debug {
+				ui.PrintInfo("🐛 Debug mode enabled from command line")
+			}
+
 			// Execute scenario steps
-			err = executeScenario(scenario, scenarioWorkers, timeout, scenarioDelay)
+			err = executeScenario(scenario, scenarioWorkers, timeout, scenarioDelay, debug)
 			if err != nil {
 				ui.PrintError(fmt.Sprintf("Scenario execution failed: %v", err))
 				return fmt.Errorf("scenario execution failed: %v", err)
@@ -264,6 +210,7 @@ func AddScenarioCommand(rootCmd *cobra.Command) {
 	scenarioCmd.Flags().Int("workers", 5, "Number of worker threads")
 	scenarioCmd.Flags().String("timeout", "60s", "Scenario timeout")
 	scenarioCmd.Flags().Int("delay", 0, "Delay in milliseconds between requests")
+	scenarioCmd.Flags().Bool("debug", false, "Enable debug mode to show request/response details")
 	scenarioCmd.MarkFlagRequired("file")
 
 	rootCmd.AddCommand(scenarioCmd)
@@ -288,7 +235,6 @@ func AddReportCommand(rootCmd *cobra.Command) {
 				ID:             "report_summary_001",
 				Type:           "Security Report",
 				Category:       common.OWASPCategoryA01BrokenAccessControl,
-				Severity:       common.SeverityLow,
 				Title:          "Security report generated",
 				Description:    "Security report generated using the report command",
 				Evidence:       "Report generated successfully with available data",
@@ -316,7 +262,6 @@ func AddReportCommand(rootCmd *cobra.Command) {
 				OutputFormat:    format,
 				OutputFile:      outputFile,
 				IncludeEvidence: includeEvidence,
-				GroupBySeverity: true,
 			}
 
 			return reporter.GenerateReport(findings, config)
@@ -354,6 +299,7 @@ type AttackConfig struct {
 	Workers     int      `yaml:"workers"`
 	PayloadSets []string `yaml:"payload_sets"`
 	Delay       int      `yaml:"delay"` // Delay in milliseconds between requests
+	Debug       bool     `yaml:"debug"` // Debug mode flag
 }
 
 type ScenarioStep struct {
@@ -611,11 +557,19 @@ func sendScenarioCompletionToGUI(scenarioName string, totalRequests int, totalFi
 }
 
 // executeStepWithRetry executes a step with retry mechanism
-func executeStepWithRetry(step ScenarioStep, stepIndex int, totalSteps int, attackEngine *engine.Engine, scenario *Scenario, totalRequests *int, totalFindings *int, delay int) error {
+func executeStepWithRetry(ctx context.Context, step ScenarioStep, stepIndex int, totalSteps int, attackEngine *engine.Engine, scenario *Scenario, totalRequests *int, totalFindings *int, delay int) error {
 	maxRetries := 3
 	retryDelay := 500 * time.Millisecond // Reduced from 2 seconds to 500ms
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
+		// Check for context cancellation before each attempt
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("step cancelled: %v", ctx.Err())
+		default:
+			// Continue with step execution
+		}
+
 		fmt.Printf("📋 Step %d/%d: %s (%s) - Attempt %d/%d\n", stepIndex+1, totalSteps, step.ID, step.Type, attempt, maxRetries)
 
 		// Send step progress to GUI
@@ -628,7 +582,7 @@ func executeStepWithRetry(step ScenarioStep, stepIndex int, totalSteps int, atta
 		// Execute step based on type
 		switch step.Type {
 		case "net:attack":
-			requests, findings, err = executeAttackStep(step, attackEngine, scenario, delay)
+			requests, findings, err = executeAttackStep(ctx, step, attackEngine, scenario, delay)
 			if err == nil {
 				*totalRequests += requests
 				*totalFindings += findings
@@ -639,8 +593,6 @@ func executeStepWithRetry(step ScenarioStep, stepIndex int, totalSteps int, atta
 			err = executeFillStep(step, scenario)
 		case "browser:click":
 			err = executeClickStep(step, scenario)
-		case "session:capture":
-			err = executeCaptureStep(step, scenario)
 		default:
 			fmt.Printf("⚠️  Unknown step type: %s\n", step.Type)
 			return nil // Skip unknown steps
@@ -666,7 +618,18 @@ func executeStepWithRetry(step ScenarioStep, stepIndex int, totalSteps int, atta
 }
 
 // executeScenario executes all steps in a scenario
-func executeScenario(scenario *Scenario, workers int, timeout string, delay int) error {
+func executeScenario(scenario *Scenario, workers int, timeout string, delay int, debug bool) error {
+	// Check if debug mode is enabled in scenario or command line
+	scenarioDebug := scenario.Attack.Debug
+	debugEnabled := debug || scenarioDebug
+	if debugEnabled {
+		if debug {
+			fmt.Printf("🐛 Debug mode enabled from command line\n")
+		}
+		if scenarioDebug {
+			fmt.Printf("🐛 Debug mode enabled from scenario configuration\n")
+		}
+	}
 	fmt.Printf("🚀 Executing scenario with %d steps\n", len(scenario.Steps))
 
 	// Parse timeout
@@ -683,8 +646,20 @@ func executeScenario(scenario *Scenario, workers int, timeout string, delay int)
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
+	// Handle signals in a goroutine with immediate termination
+	go func() {
+		sig := <-sigChan
+		fmt.Printf("\n🛑 Received signal %v, terminating immediately...\n", sig)
+		os.Exit(0)
+	}()
+
 	// Create attack engine
 	attackEngine := engine.NewEngine(workers, timeoutDuration)
+
+	// Set debug mode if enabled in scenario or command line
+	if debugEnabled {
+		attackEngine.SetDebugMode(true)
+	}
 
 	// Track total metrics
 	totalRequests := 0
@@ -692,21 +667,22 @@ func executeScenario(scenario *Scenario, workers int, timeout string, delay int)
 
 	// Execute each step with retry mechanism
 	for i, step := range scenario.Steps {
-		// Check for context cancellation or signals
+		// Check for context cancellation
 		select {
 		case <-ctx.Done():
-			errorMessage := "Scenario cancelled due to timeout"
+			errorMessage := "Scenario cancelled"
+			if ctx.Err() == context.Canceled {
+				errorMessage = "Scenario cancelled by user"
+			} else {
+				errorMessage = "Scenario cancelled due to timeout"
+			}
 			sendScenarioErrorToGUI(scenario.Name, errorMessage, totalRequests, totalFindings)
 			return fmt.Errorf("scenario cancelled: %v", ctx.Err())
-		case sig := <-sigChan:
-			errorMessage := fmt.Sprintf("Scenario interrupted by signal: %v", sig)
-			sendScenarioErrorToGUI(scenario.Name, errorMessage, totalRequests, totalFindings)
-			return fmt.Errorf("scenario interrupted: %v", sig)
 		default:
 			// Continue with step execution
 		}
 
-		err := executeStepWithRetry(step, i, len(scenario.Steps), attackEngine, scenario, &totalRequests, &totalFindings, delay)
+		err := executeStepWithRetry(ctx, step, i, len(scenario.Steps), attackEngine, scenario, &totalRequests, &totalFindings, delay)
 		if err != nil {
 			// Send error status to GUI
 			errorMessage := fmt.Sprintf("Failed at step %d: %s", i+1, step.Description)
@@ -733,7 +709,7 @@ func executeScenario(scenario *Scenario, workers int, timeout string, delay int)
 }
 
 // executeAttackStep executes a net:attack step
-func executeAttackStep(step ScenarioStep, attackEngine *engine.Engine, scenario *Scenario, delay int) (int, int, error) {
+func executeAttackStep(ctx context.Context, step ScenarioStep, attackEngine *engine.Engine, scenario *Scenario, delay int) (int, int, error) {
 	fmt.Printf("🎯 Executing attack: %s\n", step.Description)
 
 	// Get URL from either URL or Target field
@@ -754,10 +730,16 @@ func executeAttackStep(step ScenarioStep, attackEngine *engine.Engine, scenario 
 		return 0, 0, fmt.Errorf("empty URL after variable resolution")
 	}
 
+	// Set default method if not specified
+	method := step.Method
+	if method == "" {
+		method = "GET"
+	}
+
 	// Prepare attack configuration
 	config := &engine.AttackConfig{
 		Target:      resolvedURL,
-		Method:      step.Method,
+		Method:      method,
 		PayloadSets: step.PayloadSets,
 		Parameters:  step.Parameters, // Use parameters from scenario step
 		Headers:     make(map[string]string),
@@ -766,7 +748,13 @@ func executeAttackStep(step ScenarioStep, attackEngine *engine.Engine, scenario 
 	// Run the attack
 	result, err := attackEngine.RunAttack(config)
 	if err != nil {
-		return 0, 0, fmt.Errorf("attack failed: %v", err)
+		// Check if context was cancelled
+		select {
+		case <-ctx.Done():
+			return 0, 0, fmt.Errorf("attack cancelled: %v", ctx.Err())
+		default:
+			return 0, 0, fmt.Errorf("attack failed: %v", err)
+		}
 	}
 
 	fmt.Printf("✅ Attack completed: %d requests, %d vulnerabilities\n", result.TotalRequests, len(result.Vulnerabilities))
@@ -821,7 +809,6 @@ func executeReportGeneration(action ScenarioAction, scenario *Scenario, totalReq
 		OutputFormat:    format,
 		OutputFile:      outputFile,
 		IncludeEvidence: true,
-		GroupBySeverity: true,
 	}
 
 	return reporter.GenerateReport(findings, config)
@@ -1043,13 +1030,6 @@ func executeClickStep(step ScenarioStep, scenario *Scenario) error {
 	return nil
 }
 
-// executeCaptureStep executes a session:capture step
-func executeCaptureStep(step ScenarioStep, scenario *Scenario) error {
-	fmt.Printf("📸 Capturing session: %s\n", step.Description)
-	// TODO: Implement session capture
-	return nil
-}
-
 // resolveVariables resolves {{ vars.* }} variables in strings
 func resolveVariables(input string, vars map[string]string) string {
 	result := input
@@ -1265,161 +1245,4 @@ func (s *ArtifactServer) ListArtifacts(ctx context.Context, req *proto.ListArtif
 			},
 		},
 	}, nil
-}
-
-// generateHTMLReport generates an HTML security report
-func generateHTMLReport(findings []map[string]interface{}, outputFile string, includeEvidence bool) error {
-	if outputFile == "" {
-		outputFile = "simulation_report.html"
-	}
-
-	// Create a simple HTML report
-	htmlContent := `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OWASPAttackSimulator Security Report</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
-        .summary { background: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 30px; }
-        .finding { border: 1px solid #ddd; margin: 15px 0; border-radius: 5px; overflow: hidden; }
-        .finding-header { background: #007bff; color: white; padding: 15px; }
-        .finding-body { padding: 15px; }
-        .severity-critical { background: #dc3545; }
-        .severity-high { background: #fd7e14; }
-        .severity-medium { background: #ffc107; color: #212529; }
-        .severity-low { background: #28a745; }
-        .evidence { background: #f8f9fa; padding: 10px; border-radius: 3px; font-family: monospace; margin-top: 10px; }
-        .payload { background: #e9ecef; padding: 10px; border-radius: 3px; font-family: monospace; color: #dc3545; }
-        .timestamp { color: #6c757d; font-size: 0.9em; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🔒 OWASPAttackSimulator Security Report</h1>
-            <p>Generated on ` + time.Now().Format("2006-01-02 15:04:05") + `</p>
-        </div>
-
-        <div class="summary">
-            <h2>📊 Executive Summary</h2>
-            <p><strong>Total Findings:</strong> ` + fmt.Sprintf("%d", len(findings)) + `</p>
-            <p><strong>Critical:</strong> ` + fmt.Sprintf("%d", countBySeverity(findings, "Critical")) + `</p>
-            <p><strong>High:</strong> ` + fmt.Sprintf("%d", countBySeverity(findings, "High")) + `</p>
-            <p><strong>Medium:</strong> ` + fmt.Sprintf("%d", countBySeverity(findings, "Medium")) + `</p>
-            <p><strong>Low:</strong> ` + fmt.Sprintf("%d", countBySeverity(findings, "Low")) + `</p>
-        </div>
-
-        <h2>🔍 Detailed Findings</h2>`
-
-	for _, finding := range findings {
-		severityClass := "severity-" + strings.ToLower(finding["severity"].(string))
-		htmlContent += `
-        <div class="finding">
-            <div class="finding-header ` + severityClass + `">
-                <h3>` + finding["title"].(string) + `</h3>
-                <p><strong>Type:</strong> ` + finding["type"].(string) + ` | <strong>Category:</strong> ` + finding["category"].(string) + ` | <strong>Severity:</strong> ` + finding["severity"].(string) + `</p>
-            </div>
-            <div class="finding-body">
-                <p><strong>Description:</strong> ` + finding["description"].(string) + `</p>
-                <p><strong>URL:</strong> <code>` + finding["url"].(string) + `</code></p>
-                <p><strong>Method:</strong> ` + finding["method"].(string) + ` | <strong>Status:</strong> ` + fmt.Sprintf("%d", finding["response_status"].(int)) + `</p>
-                <p><strong>Payload:</strong></p>
-                <div class="payload">` + finding["payload"].(string) + `</div>`
-
-		if includeEvidence {
-			htmlContent += `
-                <p><strong>Evidence:</strong></p>
-                <div class="evidence">` + finding["evidence"].(string) + `</div>`
-		}
-
-		htmlContent += `
-                <p class="timestamp"><strong>Timestamp:</strong> ` + finding["timestamp"].(string) + `</p>
-            </div>
-        </div>`
-	}
-
-	htmlContent += `
-    </div>
-</body>
-</html>`
-
-	return os.WriteFile(outputFile, []byte(htmlContent), 0644)
-}
-
-// generateJSONReport generates a JSON security report
-func generateJSONReport(findings []map[string]interface{}, outputFile string) error {
-	if outputFile == "" {
-		outputFile = "simulation_report.json"
-	}
-
-	report := map[string]interface{}{
-		"generated":      time.Now().Format(time.RFC3339),
-		"total_findings": len(findings),
-		"summary": map[string]int{
-			"critical": countBySeverity(findings, "Critical"),
-			"high":     countBySeverity(findings, "High"),
-			"medium":   countBySeverity(findings, "Medium"),
-			"low":      countBySeverity(findings, "Low"),
-		},
-		"findings": findings,
-	}
-
-	jsonData, err := json.MarshalIndent(report, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(outputFile, jsonData, 0644)
-}
-
-// generateTextReport generates a text security report
-func generateTextReport(findings []map[string]interface{}, outputFile string) error {
-	if outputFile == "" {
-		outputFile = "simulation_report.txt"
-	}
-
-	var report strings.Builder
-	report.WriteString("OWASPAttackSimulator Security Report\n")
-	report.WriteString("=====================================\n\n")
-	report.WriteString("Generated: " + time.Now().Format("2006-01-02 15:04:05") + "\n")
-	report.WriteString("Total Findings: " + fmt.Sprintf("%d", len(findings)) + "\n\n")
-
-	report.WriteString("Summary:\n")
-	report.WriteString("- Critical: " + fmt.Sprintf("%d", countBySeverity(findings, "Critical")) + "\n")
-	report.WriteString("- High: " + fmt.Sprintf("%d", countBySeverity(findings, "High")) + "\n")
-	report.WriteString("- Medium: " + fmt.Sprintf("%d", countBySeverity(findings, "Medium")) + "\n")
-	report.WriteString("- Low: " + fmt.Sprintf("%d", countBySeverity(findings, "Low")) + "\n\n")
-
-	report.WriteString("Detailed Findings:\n")
-	report.WriteString("==================\n\n")
-
-	for i, finding := range findings {
-		report.WriteString(fmt.Sprintf("%d. %s\n", i+1, finding["title"].(string)))
-		report.WriteString(fmt.Sprintf("   Type: %s\n", finding["type"].(string)))
-		report.WriteString(fmt.Sprintf("   Severity: %s\n", finding["severity"].(string)))
-		report.WriteString(fmt.Sprintf("   Category: %s\n", finding["category"].(string)))
-		report.WriteString(fmt.Sprintf("   URL: %s\n", finding["url"].(string)))
-		report.WriteString(fmt.Sprintf("   Method: %s\n", finding["method"].(string)))
-		report.WriteString(fmt.Sprintf("   Payload: %s\n", finding["payload"].(string)))
-		report.WriteString(fmt.Sprintf("   Evidence: %s\n", finding["evidence"].(string)))
-		report.WriteString(fmt.Sprintf("   Timestamp: %s\n", finding["timestamp"].(string)))
-		report.WriteString("\n")
-	}
-
-	return os.WriteFile(outputFile, []byte(report.String()), 0644)
-}
-
-// countBySeverity counts findings by severity
-func countBySeverity(findings []map[string]interface{}, severity string) int {
-	count := 0
-	for _, finding := range findings {
-		if finding["severity"] == severity {
-			count++
-		}
-	}
-	return count
 }
