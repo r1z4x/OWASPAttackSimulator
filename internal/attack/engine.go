@@ -2,6 +2,7 @@ package attack
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -32,7 +33,8 @@ type AttackConfig struct {
 	Headers     map[string]string
 	Parameters  []string
 	PayloadSets []string
-	Delay       int // Delay in milliseconds between requests
+	Delay       int                  // Delay in milliseconds between requests
+	BodyConfig  *BodyVariationConfig // Body variation configuration
 }
 
 // AttackResult represents the result of an attack
@@ -103,8 +105,15 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 	e.totalRequests = 0
 
 	// Create work channel and result channel
-	workChan := make(chan AttackWork, e.totalRequests)
-	resultChan := make(chan *httpx.Response, e.totalRequests)
+	workChan := make(chan AttackWork, 10000)        // Large buffer
+	resultChan := make(chan *httpx.Response, 10000) // Large buffer
+
+	// Generate attack work first to calculate total requests
+	if len(config.PayloadSets) == 0 || (len(config.PayloadSets) == 1 && config.PayloadSets[0] == "all") {
+		e.generateComprehensiveAttackWork(config.Parameters, nil) // Pass nil to just calculate
+	} else {
+		e.generateSpecificPayloadWork(config.Parameters, config.PayloadSets[0], nil) // Pass nil to just calculate
+	}
 
 	// Start workers
 	var wg sync.WaitGroup
@@ -117,7 +126,7 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 			Method:  config.Method,
 			URL:     config.Target,
 			Headers: config.Headers,
-		}, config.Delay)
+		}, config.Delay, config.BodyConfig)
 	} else {
 		for i := 0; i < e.workers; i++ {
 			wg.Add(1)
@@ -125,7 +134,7 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 				Method:  config.Method,
 				URL:     config.Target,
 				Headers: config.Headers,
-			}, config.Delay)
+			}, config.Delay, config.BodyConfig)
 		}
 	}
 
@@ -171,13 +180,11 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 		}
 	}()
 
-	// Generate attack work and calculate total requests
+	// Generate and send work to channel
 	if len(config.PayloadSets) == 0 || (len(config.PayloadSets) == 1 && config.PayloadSets[0] == "all") {
-		e.generateAllPayloadWork(config.Parameters, workChan)
+		e.generateComprehensiveAttackWork(config.Parameters, workChan)
 	} else {
-		for _, payloadSet := range config.PayloadSets {
-			e.generateSpecificPayloadWork(config.Parameters, payloadSet, workChan)
-		}
+		e.generateSpecificPayloadWork(config.Parameters, config.PayloadSets[0], workChan)
 	}
 
 	close(workChan)
@@ -200,29 +207,64 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 	return result, nil
 }
 
-// generateAllPayloadWork generates work for all available attack types
-func (e *Engine) generateAllPayloadWork(parameters []string, workChan chan<- AttackWork) {
+// generateComprehensiveAttackWork generates work including all mutator variations
+func (e *Engine) generateComprehensiveAttackWork(parameters []string, workChan chan<- AttackWork) {
+	// If workChan is nil, just calculate total requests
+	calculateOnly := workChan == nil
 	// Get all available attack types from mutator
 	allPayloads := e.mutator.GetAllPayloads()
 
-	// Calculate total requests
+	// Debug: Print payload information
+	if !calculateOnly {
+		totalPayloads := 0
+		for _, payloads := range allPayloads {
+			totalPayloads += len(payloads)
+		}
+	}
+
+	// Calculate total requests including all variations
 	totalRequests := 0
 	for _, payloads := range allPayloads {
+		// Basic payloads
 		totalRequests += len(parameters) * len(payloads)
+
+		// Method variations (7 methods per payload, limited to first 3)
+		totalRequests += 3 * 7
+
+		// Header variations (14 common headers per payload, limited to first 3)
+		totalRequests += 3 * 14
+
+		// Body variations (4 body types per payload, limited to first 3)
+		totalRequests += 3 * 4
+		// Content type variations (2 variants per body type, limited to first 3 payloads)
+		totalRequests += 3 * 4 * 2
+
+		// Combination variations (2 combinations per payload, limited to first 2)
+		totalRequests += 2 * 2
 	}
 	e.totalRequests = totalRequests
 
+	if !calculateOnly {
+		fmt.Printf("🔍 [DEBUG] Calculated total requests: %d\n", totalRequests)
+	}
+
+	// Generate comprehensive work including all variations
 	for attackType, payloads := range allPayloads {
-		// Update current attack type for progress display
 		e.currentAttack = attackType
 
+		// Skip work generation if only calculating
+		if calculateOnly {
+			continue
+		}
+
+		// 1. Basic payload work
 		for _, parameter := range parameters {
 			for _, payload := range payloads {
 				work := AttackWork{
 					Parameter:  parameter,
 					Payload:    payload.Value,
 					Type:       string(payload.Type),
-					AttackType: attackType, // Add attack type to work
+					AttackType: attackType,
 				}
 				select {
 				case workChan <- work:
@@ -232,6 +274,135 @@ func (e *Engine) generateAllPayloadWork(parameters []string, workChan chan<- Att
 				}
 			}
 		}
+
+		// 2. Method variations for each payload (only for first few payloads to avoid too many requests)
+		methods := []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"}
+		for i, payload := range payloads {
+			// Limit method variations to first 3 payloads per attack type
+			if i >= 3 {
+				break
+			}
+			for _, method := range methods {
+				work := AttackWork{
+					Parameter:  "method_variation",
+					Payload:    payload.Value,
+					Type:       string(payload.Type),
+					AttackType: attackType + "_method_" + strings.ToLower(method),
+				}
+				select {
+				case workChan <- work:
+					// Work sent successfully
+				default:
+					// Channel is full, skip this work
+				}
+			}
+		}
+
+		// 3. Header variations for each payload (only for first few payloads)
+		commonHeaders := []string{"User-Agent", "Referer", "Cookie", "Accept", "Accept-Language", "Accept-Encoding", "X-Forwarded-For", "X-Forwarded-Host", "X-Original-URL", "X-Rewrite-URL", "X-Custom-IP-Authorization", "X-Forwarded-Server", "X-HTTP-Host-Override", "Forwarded"}
+		for i, payload := range payloads {
+			// Limit header variations to first 3 payloads per attack type
+			if i >= 3 {
+				break
+			}
+			for _, header := range commonHeaders {
+				work := AttackWork{
+					Parameter:  "header_variation",
+					Payload:    payload.Value,
+					Type:       string(payload.Type),
+					AttackType: attackType + "_header_" + strings.ToLower(header),
+				}
+				select {
+				case workChan <- work:
+					// Work sent successfully
+				default:
+					// Channel is full, skip this work
+				}
+			}
+		}
+
+		// 4. Body variations for each payload (only for first few payloads)
+		bodyTypes := []string{"json", "form", "xml", "multipart"}
+		for i, payload := range payloads {
+			// Limit body variations to first 3 payloads per attack type
+			if i >= 3 {
+				break
+			}
+			for _, bodyType := range bodyTypes {
+				// Basic body variation
+				work := AttackWork{
+					Parameter:  "body_variation",
+					Payload:    payload.Value,
+					Type:       string(payload.Type),
+					AttackType: attackType + "_body_" + bodyType,
+				}
+				select {
+				case workChan <- work:
+					// Work sent successfully
+				default:
+					// Channel is full, skip this work
+				}
+
+				// Content type variants (limited to first 2 variants per body type)
+				contentTypeVariants := e.getContentTypeVariants(bodyType)
+				for j, variant := range contentTypeVariants {
+					if j >= 2 { // Limit to first 2 variants
+						break
+					}
+					work := AttackWork{
+						Parameter:  "body_variation_with_content_type",
+						Payload:    payload.Value,
+						Type:       string(payload.Type),
+						AttackType: attackType + "_body_" + bodyType + "_content_type_" + strings.ReplaceAll(variant, "/", "_"),
+					}
+					select {
+					case workChan <- work:
+						// Work sent successfully
+					default:
+						// Channel is full, skip this work
+					}
+				}
+			}
+		}
+
+		// 5. Combination variations (header + URL, URL + body) - only for first few payloads
+		for i, payload := range payloads {
+			// Limit combination variations to first 2 payloads per attack type
+			if i >= 2 {
+				break
+			}
+			// Header + URL combination
+			work := AttackWork{
+				Parameter:  "combination_header_url",
+				Payload:    payload.Value,
+				Type:       string(payload.Type),
+				AttackType: attackType + "_combination_header_url",
+			}
+			select {
+			case workChan <- work:
+				// Work sent successfully
+			default:
+				// Channel is full, skip this work
+			}
+
+			// URL + Body combination
+			work2 := AttackWork{
+				Parameter:  "combination_url_body",
+				Payload:    payload.Value,
+				Type:       string(payload.Type),
+				AttackType: attackType + "_combination_url_body",
+			}
+			select {
+			case workChan <- work2:
+				// Work sent successfully
+			default:
+				// Channel is full, skip this work
+			}
+		}
+	}
+
+	if !calculateOnly {
+		fmt.Printf("🔍 [DEBUG] Finished generating work\n")
 	}
 }
 
@@ -288,26 +459,187 @@ func (e *Engine) generateSpecificPayloadWork(parameters []string, payloadSet str
 
 	// Get payloads for this attack type
 	payloads := e.mutator.GetPayloadsForType(common.AttackType(attackType))
-	fmt.Printf("📦 Loading payload set: %s (%d payloads)\n", payloadSet, len(payloads))
 
-	// Calculate total requests for this payload set
+	// Calculate total requests for this payload set - include all variations
 	e.totalRequests = len(parameters) * len(payloads)
 
+	// Add method variations (limited to first 3 payloads)
+	e.totalRequests += 3 * 7
+
+	// Add header variations (limited to first 3 payloads)
+	e.totalRequests += 3 * 14
+
+	// Add body variations (limited to first 3 payloads)
+	e.totalRequests += 3 * 4
+
+	// Add combination variations (limited to first 2 payloads)
+	e.totalRequests += 2 * 2
+
+	// Add encoded variations (limited to first 2 payloads, up to 4 encodings each)
+	e.totalRequests += 2 * 4
+
+	// If workChan is nil, just calculate
+	if workChan == nil {
+		return
+	}
+
+	// 1. Basic payload work
 	for _, parameter := range parameters {
 		for _, payload := range payloads {
 			work := AttackWork{
 				Parameter:  parameter,
 				Payload:    payload.Value,
 				Type:       string(payload.Type),
-				AttackType: attackType, // Add attack type to work
+				AttackType: attackType,
 			}
 			workChan <- work
 		}
 	}
+
+	// 2. Method variations for each payload (only for first few payloads)
+	methods := []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"}
+	for i, payload := range payloads {
+		// Limit method variations to first 3 payloads per attack type
+		if i >= 3 {
+			break
+		}
+		for _, method := range methods {
+			work := AttackWork{
+				Parameter:  "method_variation",
+				Payload:    payload.Value,
+				Type:       string(payload.Type),
+				AttackType: attackType + "_method_" + strings.ToLower(method),
+			}
+			workChan <- work
+		}
+	}
+
+	// 3. Header variations for each payload (only for first few payloads)
+	commonHeaders := []string{"User-Agent", "Referer", "Cookie", "Accept", "Accept-Language", "Accept-Encoding", "X-Forwarded-For", "X-Forwarded-Host", "X-Original-URL", "X-Rewrite-URL", "X-Custom-IP-Authorization", "X-Forwarded-Server", "X-HTTP-Host-Override", "Forwarded"}
+	for i, payload := range payloads {
+		// Limit header variations to first 3 payloads per attack type
+		if i >= 3 {
+			break
+		}
+		for _, header := range commonHeaders {
+			work := AttackWork{
+				Parameter:  "header_variation",
+				Payload:    payload.Value,
+				Type:       string(payload.Type),
+				AttackType: attackType + "_header_" + strings.ToLower(header),
+			}
+			workChan <- work
+		}
+	}
+
+	// 4. Body variations for each payload (only for first few payloads)
+	bodyTypes := []string{"json", "form", "xml", "multipart"}
+	for i, payload := range payloads {
+		// Limit body variations to first 3 payloads per attack type
+		if i >= 3 {
+			break
+		}
+		for _, bodyType := range bodyTypes {
+			work := AttackWork{
+				Parameter:  "body_variation",
+				Payload:    payload.Value,
+				Type:       string(payload.Type),
+				AttackType: attackType + "_body_" + bodyType,
+			}
+			workChan <- work
+		}
+	}
+
+	// 5. Encoded variations (URL, Double URL, Hex, Unicode) - only for first few payloads
+	for i, payload := range payloads {
+		// Limit encoded variations to first 2 payloads per attack type
+		if i >= 2 {
+			break
+		}
+
+		// URL encoded variation
+		urlEncoded := url.QueryEscape(payload.Value)
+		if urlEncoded != payload.Value {
+			work := AttackWork{
+				Parameter:  "encoded_url",
+				Payload:    urlEncoded,
+				Type:       string(payload.Type),
+				AttackType: attackType + "_encoded_url",
+			}
+			workChan <- work
+		}
+
+		// Double URL encoded variation
+		doubleEncoded := url.QueryEscape(url.QueryEscape(payload.Value))
+		if doubleEncoded != payload.Value && doubleEncoded != urlEncoded {
+			work := AttackWork{
+				Parameter:  "encoded_double_url",
+				Payload:    doubleEncoded,
+				Type:       string(payload.Type),
+				AttackType: attackType + "_encoded_double_url",
+			}
+			workChan <- work
+		}
+
+		// Hex encoded variation
+		hexEncoded := e.hexEncode(payload.Value)
+		if hexEncoded != payload.Value {
+			work := AttackWork{
+				Parameter:  "encoded_hex",
+				Payload:    hexEncoded,
+				Type:       string(payload.Type),
+				AttackType: attackType + "_encoded_hex",
+			}
+			workChan <- work
+		}
+
+		// Unicode encoded variation
+		unicodeEncoded := e.unicodeEncode(payload.Value)
+		if unicodeEncoded != payload.Value {
+			work := AttackWork{
+				Parameter:  "encoded_unicode",
+				Payload:    unicodeEncoded,
+				Type:       string(payload.Type),
+				AttackType: attackType + "_encoded_unicode",
+			}
+			workChan <- work
+		}
+	}
+
+	// 6. Combination variations (header + URL, URL + body) - only for first few payloads
+	for i, payload := range payloads {
+		// Limit combination variations to first 2 payloads per attack type
+		if i >= 2 {
+			break
+		}
+		// Header + URL combination
+		work := AttackWork{
+			Parameter:  "combination_header_url",
+			Payload:    payload.Value,
+			Type:       string(payload.Type),
+			AttackType: attackType + "_combination_header_url",
+		}
+		workChan <- work
+
+		// URL + Body combination
+		work2 := AttackWork{
+			Parameter:  "combination_url_body",
+			Payload:    payload.Value,
+			Type:       string(payload.Type),
+			AttackType: attackType + "_combination_url_body",
+		}
+		workChan <- work2
+	}
+}
+
+// generateAllPayloadWork generates work for all available attack types
+func (e *Engine) generateAllPayloadWork(parameters []string, workChan chan<- AttackWork) {
+	// Use comprehensive attack work generation
+	e.generateComprehensiveAttackWork(parameters, workChan)
 }
 
 // worker processes attack work
-func (e *Engine) worker(wg *sync.WaitGroup, workChan <-chan AttackWork, resultChan chan<- *httpx.Response, baseRequest httpx.Request, delay int) {
+func (e *Engine) worker(wg *sync.WaitGroup, workChan <-chan AttackWork, resultChan chan<- *httpx.Response, baseRequest httpx.Request, delay int, bodyConfig *BodyVariationConfig) {
 	defer wg.Done()
 
 	for work := range workChan {
@@ -330,8 +662,64 @@ func (e *Engine) worker(wg *sync.WaitGroup, workChan <-chan AttackWork, resultCh
 			req.Params[k] = v
 		}
 
-		// Add the payload parameter
-		req.Params[work.Parameter] = work.Payload
+		// Handle different variation types
+		switch work.Parameter {
+		case "method_variation":
+			// Extract method from attack type
+			if strings.Contains(work.AttackType, "_method_") {
+				parts := strings.Split(work.AttackType, "_method_")
+				if len(parts) > 1 {
+					req.Method = strings.ToUpper(parts[1])
+				}
+			}
+			// Add payload to URL parameters
+			req.Params["id"] = work.Payload
+
+		case "header_variation":
+			// Extract header name from attack type
+			if strings.Contains(work.AttackType, "_header_") {
+				parts := strings.Split(work.AttackType, "_header_")
+				if len(parts) > 1 {
+					req.Headers[parts[1]] = work.Payload
+				}
+			}
+			// Add payload to URL parameters
+			req.Params["id"] = work.Payload
+
+		case "body_variation":
+			// Extract body type from attack type
+			if strings.Contains(work.AttackType, "_body_") {
+				parts := strings.Split(work.AttackType, "_body_")
+				if len(parts) > 1 {
+					req.Body = []byte(fmt.Sprintf(`{"data": "%s"}`, work.Payload))
+					req.Headers["Content-Type"] = "application/json"
+					req.Headers["Content-Length"] = fmt.Sprintf("%d", len(req.Body))
+				}
+			}
+			// Add payload to URL parameters
+			req.Params["id"] = work.Payload
+
+		case "combination_header_url":
+			// Add payload to headers
+			req.Headers["User-Agent"] = work.Payload
+			req.Headers["Referer"] = work.Payload
+			// Add payload to URL parameters
+			req.Params["id"] = work.Payload
+
+		case "combination_url_body":
+			// Add payload to URL parameters
+			req.Params["id"] = work.Payload
+			// Add payload to body
+			if strings.Contains(req.Headers["Content-Type"], "application/json") {
+				req.Body = []byte(fmt.Sprintf(`{"data": "%s"}`, work.Payload))
+			} else {
+				req.Body = []byte(fmt.Sprintf("data=%s", work.Payload))
+			}
+
+		default:
+			// Standard parameter injection
+			req.Params[work.Parameter] = work.Payload
+		}
 
 		// Show debug information if enabled
 		if e.debug {
@@ -344,6 +732,9 @@ func (e *Engine) worker(wg *sync.WaitGroup, workChan <-chan AttackWork, resultCh
 			}
 			if len(req.Params) > 0 {
 				fmt.Printf("   Params: %v\n", req.Params)
+			}
+			if len(req.Body) > 0 {
+				fmt.Printf("   Body: %s\n", string(req.Body))
 			}
 		}
 
@@ -400,7 +791,7 @@ func (e *Engine) worker(wg *sync.WaitGroup, workChan <-chan AttackWork, resultCh
 }
 
 // sequentialWorker processes attack work sequentially (for single thread mode)
-func (e *Engine) sequentialWorker(wg *sync.WaitGroup, workChan <-chan AttackWork, resultChan chan<- *httpx.Response, baseRequest httpx.Request, delay int) {
+func (e *Engine) sequentialWorker(wg *sync.WaitGroup, workChan <-chan AttackWork, resultChan chan<- *httpx.Response, baseRequest httpx.Request, delay int, bodyConfig *BodyVariationConfig) {
 	defer wg.Done()
 
 	for work := range workChan {
@@ -409,9 +800,12 @@ func (e *Engine) sequentialWorker(wg *sync.WaitGroup, workChan <-chan AttackWork
 			Method:  baseRequest.Method,
 			URL:     baseRequest.URL,
 			Headers: make(map[string]string),
-			Body:    baseRequest.Body,
+			Body:    make([]byte, len(baseRequest.Body)),
 			Params:  make(map[string]string),
 		}
+
+		// Copy body safely
+		copy(req.Body, baseRequest.Body)
 
 		// Copy headers safely
 		for k, v := range baseRequest.Headers {
@@ -423,8 +817,88 @@ func (e *Engine) sequentialWorker(wg *sync.WaitGroup, workChan <-chan AttackWork
 			req.Params[k] = v
 		}
 
-		// Add the payload parameter
-		req.Params[work.Parameter] = work.Payload
+		// Handle different variation types
+		switch work.Parameter {
+		case "method_variation":
+			// Extract method from attack type
+			if strings.Contains(work.AttackType, "_method_") {
+				parts := strings.Split(work.AttackType, "_method_")
+				if len(parts) > 1 {
+					req.Method = strings.ToUpper(parts[1])
+				}
+			}
+			// Add payload to URL parameters
+			req.Params["id"] = work.Payload
+
+		case "header_variation":
+			// Extract header name from attack type
+			if strings.Contains(work.AttackType, "_header_") {
+				parts := strings.Split(work.AttackType, "_header_")
+				if len(parts) > 1 {
+					req.Headers[parts[1]] = work.Payload
+				}
+			}
+			// Add payload to URL parameters
+			req.Params["id"] = work.Payload
+
+		case "body_variation":
+			// Extract body type from attack type
+			if strings.Contains(work.AttackType, "_body_") {
+				parts := strings.Split(work.AttackType, "_body_")
+				if len(parts) > 1 {
+					bodyType := parts[1]
+					body, contentType := e.createBodyVariation(bodyType, work.Payload, bodyConfig)
+					req.Body = body
+					req.Headers["Content-Type"] = contentType
+					req.Headers["Content-Length"] = fmt.Sprintf("%d", len(req.Body))
+				}
+			}
+			// Add payload to URL parameters as well
+			req.Params["id"] = work.Payload
+
+		case "body_variation_with_content_type":
+			// Extract body type and content type from attack type
+			if strings.Contains(work.AttackType, "_body_") && strings.Contains(work.AttackType, "_content_type_") {
+				// Parse: attackType_body_bodyType_content_type_contentType
+				parts := strings.Split(work.AttackType, "_body_")
+				if len(parts) > 1 {
+					bodyAndContentType := parts[1]
+					contentTypeParts := strings.Split(bodyAndContentType, "_content_type_")
+					if len(contentTypeParts) > 1 {
+						bodyType := contentTypeParts[0]
+						contentType := strings.ReplaceAll(contentTypeParts[1], "_", "/")
+
+						body, _ := e.createBodyVariation(bodyType, work.Payload, bodyConfig)
+						req.Body = body
+						req.Headers["Content-Type"] = contentType
+						req.Headers["Content-Length"] = fmt.Sprintf("%d", len(req.Body))
+					}
+				}
+			}
+			// Add payload to URL parameters as well
+			req.Params["id"] = work.Payload
+
+		case "combination_header_url":
+			// Add payload to headers
+			req.Headers["User-Agent"] = work.Payload
+			req.Headers["Referer"] = work.Payload
+			// Add payload to URL parameters
+			req.Params["id"] = work.Payload
+
+		case "combination_url_body":
+			// Add payload to URL parameters
+			req.Params["id"] = work.Payload
+			// Add payload to body
+			if strings.Contains(req.Headers["Content-Type"], "application/json") {
+				req.Body = []byte(fmt.Sprintf(`{"data": "%s"}`, work.Payload))
+			} else {
+				req.Body = []byte(fmt.Sprintf("data=%s", work.Payload))
+			}
+
+		default:
+			// Standard parameter injection
+			req.Params[work.Parameter] = work.Payload
+		}
 
 		// Show debug information if enabled
 		if e.debug {
@@ -437,6 +911,9 @@ func (e *Engine) sequentialWorker(wg *sync.WaitGroup, workChan <-chan AttackWork
 			}
 			if len(req.Params) > 0 {
 				fmt.Printf("   Params: %v\n", req.Params)
+			}
+			if len(req.Body) > 0 {
+				fmt.Printf("   Body: %s\n", string(req.Body))
 			}
 		}
 
@@ -548,7 +1025,56 @@ func (e *Engine) getOWASPCategoryForAttackType(attackType string) common.OWASPCa
 		return common.OWASPCategoryA10SSRF
 
 	default:
-		return common.OWASPCategoryA05SecurityMisconfiguration
+		// For unknown attack types, try to determine category from attack type name
+		attackTypeLower := strings.ToLower(attackType)
+
+		// Handle body variation attack types by extracting base attack type
+		if strings.Contains(attackTypeLower, "_body_") {
+			parts := strings.Split(attackTypeLower, "_body_")
+			if len(parts) > 0 {
+				baseAttackType := parts[0]
+				// Recursively call with base attack type
+				return e.getOWASPCategoryForAttackType(baseAttackType)
+			}
+		}
+
+		// Handle method variation attack types
+		if strings.Contains(attackTypeLower, "_method_") {
+			parts := strings.Split(attackTypeLower, "_method_")
+			if len(parts) > 0 {
+				baseAttackType := parts[0]
+				return e.getOWASPCategoryForAttackType(baseAttackType)
+			}
+		}
+
+		// Handle header variation attack types
+		if strings.Contains(attackTypeLower, "_header_") {
+			parts := strings.Split(attackTypeLower, "_header_")
+			if len(parts) > 0 {
+				baseAttackType := parts[0]
+				return e.getOWASPCategoryForAttackType(baseAttackType)
+			}
+		}
+
+		// Check for specific patterns in attack type
+		if strings.Contains(attackTypeLower, "xss") || strings.Contains(attackTypeLower, "injection") {
+			return common.OWASPCategoryA03Injection
+		}
+		if strings.Contains(attackTypeLower, "auth") || strings.Contains(attackTypeLower, "login") {
+			return common.OWASPCategoryA07AuthFailures
+		}
+		if strings.Contains(attackTypeLower, "crypto") || strings.Contains(attackTypeLower, "hash") {
+			return common.OWASPCategoryA02CryptographicFailures
+		}
+		if strings.Contains(attackTypeLower, "access") || strings.Contains(attackTypeLower, "idor") {
+			return common.OWASPCategoryA01BrokenAccessControl
+		}
+		if strings.Contains(attackTypeLower, "ssrf") || strings.Contains(attackTypeLower, "xxe") {
+			return common.OWASPCategoryA10SSRF
+		}
+
+		// If still unknown, return a generic category instead of A05
+		return common.OWASPCategoryA03Injection // Most common for unknown attack types
 	}
 }
 
@@ -556,6 +1082,121 @@ func (e *Engine) getOWASPCategoryForAttackType(attackType string) common.OWASPCa
 func (e *Engine) getVariantForPayload(attackType string, payload string) string {
 	if e.debug {
 		fmt.Printf("🔍 [DEBUG] getVariantForPayload: attackType=%s, payload=%s\n", attackType, payload)
+	}
+
+	// Handle method variations and combination variations
+	if strings.Contains(attackType, "_method_") {
+		// Extract base attack type from method variation
+		parts := strings.Split(attackType, "_method_")
+		if len(parts) > 0 {
+			baseAttackType := parts[0]
+			payloads := e.mutator.GetPayloadsForType(common.AttackType(baseAttackType))
+
+			// Find the payload and return its variant with method suffix
+			for _, p := range payloads {
+				if p.Value == payload {
+					method := strings.ToUpper(parts[1])
+					return p.Variant + "_method_" + method
+				}
+			}
+
+			// If payload not found in base attack type, return a meaningful variant
+			method := strings.ToUpper(parts[1])
+			return baseAttackType + "_method_" + method
+		}
+		return "method_variation"
+	}
+
+	if strings.Contains(attackType, "_header_") {
+		// Extract base attack type from header variation
+		parts := strings.Split(attackType, "_header_")
+		if len(parts) > 0 {
+			baseAttackType := parts[0]
+			payloads := e.mutator.GetPayloadsForType(common.AttackType(baseAttackType))
+
+			// Find the payload and return its variant with header suffix
+			for _, p := range payloads {
+				if p.Value == payload {
+					header := parts[1]
+					return p.Variant + "_header_" + header
+				}
+			}
+
+			// If payload not found in base attack type, return a meaningful variant
+			header := parts[1]
+			return baseAttackType + "_header_" + header
+		}
+		return "header_variation"
+	}
+
+	if strings.Contains(attackType, "_body_") {
+		// Handle body_variation_with_content_type specially
+		if strings.Contains(attackType, "_content_type_") {
+			// Parse: attackType_body_bodyType_content_type_contentType
+			parts := strings.Split(attackType, "_body_")
+			if len(parts) > 1 {
+				baseAttackType := parts[0]
+				bodyAndContentType := parts[1]
+				contentTypeParts := strings.Split(bodyAndContentType, "_content_type_")
+				if len(contentTypeParts) > 1 {
+					bodyType := contentTypeParts[0]
+					contentType := strings.ReplaceAll(contentTypeParts[1], "_", "/")
+
+					payloads := e.mutator.GetPayloadsForType(common.AttackType(baseAttackType))
+					for _, p := range payloads {
+						if p.Value == payload {
+							return p.Variant + "_body_" + bodyType + "_content_type_" + contentType
+						}
+					}
+
+					// If payload not found, return meaningful variant
+					return baseAttackType + "_body_" + bodyType + "_content_type_" + contentType
+				}
+			}
+			return "body_variation_with_content_type"
+		}
+
+		// Regular body variation
+		parts := strings.Split(attackType, "_body_")
+		if len(parts) > 0 {
+			baseAttackType := parts[0]
+			payloads := e.mutator.GetPayloadsForType(common.AttackType(baseAttackType))
+
+			// Find the payload and return its variant with body suffix
+			for _, p := range payloads {
+				if p.Value == payload {
+					bodyType := parts[1]
+					return p.Variant + "_body_" + bodyType
+				}
+			}
+
+			// If payload not found in base attack type, return a meaningful variant
+			bodyType := parts[1]
+			return baseAttackType + "_body_" + bodyType
+		}
+		return "body_variation"
+	}
+
+	if strings.Contains(attackType, "_combination_") {
+		// Extract base attack type from combination variation
+		parts := strings.Split(attackType, "_combination_")
+		if len(parts) > 0 {
+			baseAttackType := parts[0]
+			payloads := e.mutator.GetPayloadsForType(common.AttackType(baseAttackType))
+
+			// Find the payload and return its variant with combination suffix
+			for _, p := range payloads {
+				if p.Value == payload {
+					combinationType := parts[1]
+					return p.Variant + "_combination_" + combinationType
+				}
+			}
+
+			// If payload not found in base attack type, return a meaningful variant
+			combinationType := parts[1]
+			return baseAttackType + "_combination_" + combinationType
+		}
+		return "combination_variation"
 	}
 
 	// Get all payloads for this attack type
@@ -575,11 +1216,19 @@ func (e *Engine) getVariantForPayload(attackType string, payload string) string 
 		}
 	}
 
-	// If not found, return a default variant name
+	// If not found, return a default variant name based on attack type
 	if e.debug {
-		fmt.Printf("🔍 [DEBUG] Variant not found, returning unknown_variant\n")
+		fmt.Printf("🔍 [DEBUG] Variant not found, returning default variant\n")
 	}
-	return "unknown_variant"
+
+	// Return a meaningful default variant name
+	if strings.Contains(attackType, "_") {
+		// For complex attack types, extract the base type
+		parts := strings.Split(attackType, "_")
+		return parts[0] + "_default"
+	}
+
+	return attackType + "_default"
 }
 
 // analyzeResponseForFindings analyzes a response and returns findings
@@ -624,7 +1273,7 @@ func (e *Engine) analyzeResponseForFindings(resp *httpx.Response) []common.Findi
 		RateLimited:    rateLimited,
 		Forbidden:      forbidden,
 		ServerError:    serverError,
-		Timestamp:      time.Now(),
+		Timestamp:      resp.Timestamp, // Request'in gerçek gönderilme zamanı
 		RequestRaw:     requestRaw,
 		ResponseRaw:    responseRaw,
 	}
@@ -923,27 +1572,6 @@ func (e *Engine) isServerError(resp *httpx.Response) bool {
 	return false
 }
 
-// hasUnusualResponsePattern checks for unusual response patterns
-func (e *Engine) hasUnusualResponsePattern(resp *httpx.Response) bool {
-	// Check for very large responses (potential data dump)
-	if len(resp.Body) > 100000 {
-		return true
-	}
-
-	// Check for very small responses (potential error)
-	if len(resp.Body) < 100 && resp.StatusCode != 204 {
-		return true
-	}
-
-	// Check for unusual content types
-	contentType := resp.Headers["content-type"]
-	if contentType != "" && !strings.Contains(strings.ToLower(contentType), "text/html") {
-		return true
-	}
-
-	return false
-}
-
 // generateEvidence generates evidence based on response analysis
 func (e *Engine) generateEvidence(resp *httpx.Response, blocked, rateLimited, forbidden, serverError bool) string {
 	var evidence []string
@@ -966,4 +1594,287 @@ func (e *Engine) generateEvidence(resp *httpx.Response, blocked, rateLimited, fo
 	}
 
 	return strings.Join(evidence, "; ")
+}
+
+// hexEncode encodes special characters as hex
+func (e *Engine) hexEncode(input string) string {
+	var result strings.Builder
+	for _, char := range input {
+		if char < 32 || char > 126 {
+			result.WriteString(fmt.Sprintf("\\x%02x", char))
+		} else {
+			result.WriteRune(char)
+		}
+	}
+	return result.String()
+}
+
+// unicodeEncode encodes special characters as unicode
+func (e *Engine) unicodeEncode(input string) string {
+	var result strings.Builder
+	for _, char := range input {
+		if char < 32 || char > 126 {
+			result.WriteString(fmt.Sprintf("\\u%04x", char))
+		} else {
+			result.WriteRune(char)
+		}
+	}
+	return result.String()
+}
+
+// createHeaderVariation creates different header injection patterns
+func (e *Engine) createHeaderVariation(headerName, payload string) map[string]string {
+	headers := make(map[string]string)
+
+	switch strings.ToLower(headerName) {
+	case "user-agent":
+		headers["User-Agent"] = payload
+	case "referer":
+		headers["Referer"] = payload
+	case "cookie":
+		headers["Cookie"] = payload
+	case "accept":
+		headers["Accept"] = payload
+	case "accept-language":
+		headers["Accept-Language"] = payload
+	case "accept-encoding":
+		headers["Accept-Encoding"] = payload
+	case "x-forwarded-for":
+		headers["X-Forwarded-For"] = payload
+	case "x-forwarded-host":
+		headers["X-Forwarded-Host"] = payload
+	case "x-original-url":
+		headers["X-Original-URL"] = payload
+	case "x-rewrite-url":
+		headers["X-Rewrite-URL"] = payload
+	case "x-custom-ip-authorization":
+		headers["X-Custom-IP-Authorization"] = payload
+	case "x-forwarded-server":
+		headers["X-Forwarded-Server"] = payload
+	case "x-http-host-override":
+		headers["X-HTTP-Host-Override"] = payload
+	case "forwarded":
+		headers["Forwarded"] = payload
+	default:
+		headers[headerName] = payload
+	}
+
+	return headers
+}
+
+// BodyVariationConfig represents configuration for body variations
+type BodyVariationConfig struct {
+	Fields      map[string]string `json:"fields"`       // Custom field names and values
+	Structure   string            `json:"structure"`    // "simple", "nested", "array"
+	Template    string            `json:"template"`     // Custom template
+	ContentType string            `json:"content_type"` // Custom content type
+	Variants    []string          `json:"variants"`     // Content type variants to test
+}
+
+// getContentTypeVariants returns different content type variants for testing
+func (e *Engine) getContentTypeVariants(baseType string) []string {
+	switch baseType {
+	case "json":
+		return []string{
+			"application/json",
+			"application/json; charset=utf-8",
+			"application/json; charset=UTF-8",
+			"application/json; charset=iso-8859-1",
+			"application/json; version=1.0",
+			"application/json; profile=https://example.com/schema",
+			"application/vnd.api+json",
+			"application/ld+json",
+			"application/geo+json",
+		}
+	case "form":
+		return []string{
+			"application/x-www-form-urlencoded",
+			"application/x-www-form-urlencoded; charset=utf-8",
+			"application/x-www-form-urlencoded; charset=UTF-8",
+			"application/x-www-form-urlencoded; charset=iso-8859-1",
+		}
+	case "xml":
+		return []string{
+			"application/xml",
+			"application/xml; charset=utf-8",
+			"application/xml; charset=UTF-8",
+			"text/xml",
+			"text/xml; charset=utf-8",
+			"application/soap+xml",
+			"application/atom+xml",
+			"application/rss+xml",
+		}
+	case "multipart":
+		return []string{
+			"multipart/form-data",
+			"multipart/form-data; boundary=----WebKitFormBoundary",
+			"multipart/mixed",
+			"multipart/alternative",
+			"multipart/related",
+		}
+	default:
+		return []string{baseType}
+	}
+}
+
+// createBodyVariation creates different body types with payload injection
+func (e *Engine) createBodyVariation(bodyType, payload string, config *BodyVariationConfig) ([]byte, string) {
+	// Use default config if none provided
+	if config == nil {
+		config = &BodyVariationConfig{
+			Fields: map[string]string{
+				"id":    "test",
+				"name":  "test",
+				"email": "test@test.com",
+				"data":  "test",
+			},
+			Structure: "simple",
+		}
+	}
+
+	// Create body content
+	var body []byte
+	var contentType string
+
+	switch bodyType {
+	case "json":
+		// Create JSON body using mutator's logic
+		jsonData := map[string]interface{}{
+			"id":    payload,
+			"name":  payload,
+			"email": payload,
+			"data":  payload,
+		}
+
+		// Override with config fields if provided
+		if config.Fields != nil {
+			jsonData = make(map[string]interface{})
+			for key := range config.Fields {
+				jsonData[key] = payload
+			}
+		}
+
+		// Handle different structures
+		if config.Structure == "nested" {
+			jsonData = map[string]interface{}{
+				"user": map[string]interface{}{
+					"id": payload,
+					"profile": map[string]interface{}{
+						"name":  payload,
+						"email": payload,
+					},
+				},
+				"data": payload,
+			}
+		} else if config.Structure == "array" {
+			jsonData = map[string]interface{}{
+				"items": []string{payload, payload, payload},
+				"data":  payload,
+			}
+		}
+
+		bodyBytes, _ := json.Marshal(jsonData)
+		body = bodyBytes
+		contentType = "application/json"
+
+	case "form":
+		// Create form body using mutator's logic
+		formData := url.Values{}
+		formData.Set("id", payload)
+		formData.Set("name", payload)
+		formData.Set("email", payload)
+		formData.Set("data", payload)
+
+		// Override with config fields if provided
+		if config.Fields != nil {
+			formData = url.Values{}
+			for key := range config.Fields {
+				formData.Set(key, payload)
+			}
+		}
+
+		body = []byte(formData.Encode())
+		contentType = "application/x-www-form-urlencoded"
+
+	case "xml":
+		// Create XML body using mutator's logic
+		xmlBody := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <id>%s</id>
+    <name>%s</name>
+    <email>%s</email>
+    <data>%s</data>
+</root>`, payload, payload, payload, payload)
+
+		// Override with config fields if provided
+		if config.Fields != nil {
+			var fieldElements []string
+			for key := range config.Fields {
+				fieldElements = append(fieldElements, fmt.Sprintf("    <%s>%s</%s>", key, payload, key))
+			}
+			xmlBody = fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<root>
+%s
+</root>`, strings.Join(fieldElements, "\n"))
+		}
+
+		body = []byte(xmlBody)
+		contentType = "application/xml"
+
+	case "multipart":
+		// Create multipart body using mutator's logic
+		boundary := "----WebKitFormBoundary" + fmt.Sprintf("%d", time.Now().Unix())
+
+		var fieldParts []string
+		fields := []string{"id", "name", "email", "data"}
+
+		// Override with config fields if provided
+		if config.Fields != nil {
+			fields = make([]string, 0, len(config.Fields))
+			for key := range config.Fields {
+				fields = append(fields, key)
+			}
+		}
+
+		for _, field := range fields {
+			fieldPart := fmt.Sprintf(`--%s
+Content-Disposition: form-data; name="%s"
+
+%s`, boundary, field, payload)
+			fieldParts = append(fieldParts, fieldPart)
+		}
+
+		multipartBody := strings.Join(fieldParts, "\n") + "\n--" + boundary + "--"
+		body = []byte(multipartBody)
+		contentType = "multipart/form-data; boundary=" + boundary
+
+	default:
+		// Default to JSON
+		jsonData := map[string]interface{}{"data": payload}
+		bodyBytes, _ := json.Marshal(jsonData)
+		body = bodyBytes
+		contentType = "application/json"
+	}
+
+	// Override content type if specified in config
+	if config.ContentType != "" {
+		contentType = config.ContentType
+	}
+
+	return body, contentType
+}
+
+// createBodyVariationWithVariant creates body with specific content type variant
+func (e *Engine) createBodyVariationWithVariant(bodyType, payload string, config *BodyVariationConfig, variant string) ([]byte, string) {
+	// Create base body
+	body, _ := e.createBodyVariation(bodyType, payload, config)
+
+	// Use specified variant or default
+	if variant != "" {
+		return body, variant
+	}
+
+	// Get default content type
+	_, contentType := e.createBodyVariation(bodyType, payload, config)
+	return body, contentType
 }

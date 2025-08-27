@@ -194,6 +194,8 @@ steps:
 
 For complete DSL documentation, see [SCENARIO_DSL.md](docs/SCENARIO_DSL.md).
 
+For body and header variation testing capabilities, see [BODY_HEADER_VARIATIONS.md](docs/BODY_HEADER_VARIATIONS.md).
+
 ## Testing
 
 ```bash

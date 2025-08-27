@@ -53,10 +53,11 @@ type Response struct {
 	Body       []byte
 	Duration   time.Duration
 	URL        string
-	Method     string // HTTP method used
-	Parameter  string // Parameter that was tested
-	Payload    string // Payload that was used
-	AttackType string // Attack type that was used
+	Method     string    // HTTP method used
+	Parameter  string    // Parameter that was tested
+	Payload    string    // Payload that was used
+	AttackType string    // Attack type that was used
+	Timestamp  time.Time // When the request was sent
 }
 
 // DoRequest performs an HTTP request
@@ -119,5 +120,6 @@ func (c *Client) DoRequest(ctx context.Context, req *Request) (*Response, error)
 		Duration:   time.Since(start),
 		URL:        resp.Request.URL.String(),
 		Method:     req.Method,
+		Timestamp:  start, // Request gönderilme zamanı
 	}, nil
 }

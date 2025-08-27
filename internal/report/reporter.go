@@ -206,6 +206,7 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">#</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Timestamp</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Request Type</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Method</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">URL</th>
@@ -221,6 +222,9 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                             {{range $index, $finding := .Findings}}
                             <tr class="hover:bg-gray-50">
                                 <td class="px-4 py-3 text-sm text-gray-900 font-mono">{{add $index 1}}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900 font-mono">
+                                    <span class="text-xs">{{formatTimestamp .Timestamp}}</span>
+                                </td>
                                 <td class="px-4 py-3 text-sm font-medium text-gray-900">
                                     <span class="font-mono text-sm">{{.VulnerabilityType | html}}</span>
                                 </td>
@@ -695,6 +699,9 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
 				return fmt.Sprintf("%.1fMB", float64(size)/1048576.0)
 			}
 		},
+		"formatTimestamp": func(t time.Time) string {
+			return t.Format("02/01/2006 15:04:05")
+		},
 		"replace": func(old, new, s string) string {
 			return strings.ReplaceAll(s, old, new)
 		},
@@ -823,6 +830,7 @@ type AnalysisGroup struct {
 	ResponseData      string
 	RequestRaw        string
 	ResponseRaw       string
+	Timestamp         time.Time
 }
 
 // groupFindingsForAnalysis groups findings for detailed vulnerability analysis
@@ -860,6 +868,7 @@ func (r *Reporter) groupFindingsForAnalysis(findings []common.Finding) []Analysi
 			ResponseData:      responseData,
 			RequestRaw:        finding.RequestRaw,
 			ResponseRaw:       finding.ResponseRaw,
+			Timestamp:         finding.Timestamp,
 		})
 	}
 

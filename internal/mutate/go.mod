@@ -4,6 +4,7 @@ go 1.23
 
 require (
 	github.com/owaspattacksimulator/internal/common v0.0.0
+	github.com/google/uuid v1.6.0
 )
 
 replace (

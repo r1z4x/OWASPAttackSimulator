@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/owaspattacksimulator/internal/common"
 )
 
@@ -963,7 +962,7 @@ func copyJSONMap(original map[string]interface{}) map[string]interface{} {
 
 // generateID generates a unique ID
 func generateID() string {
-	return uuid.New().String()
+	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
 // createEncodedVariations creates URL encoded variations of existing payloads
