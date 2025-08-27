@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package owaspchecker.scenario;
+package owaspattacksimulator.scenario;
 
-option go_package = "github.com/owaspchecker/api/proto;proto";
+option go_package = "github.com/owaspattacksimulator/api/proto;proto";
 
 import "google/protobuf/timestamp.proto";
 
@@ -78,11 +78,11 @@ message Scenario {
   string name = 2;
   string description = 3;
   map<string, string> variables = 4;
-  repeated Step steps = 5;
+  repeated ScenarioStep steps = 5;
   map<string, string> metadata = 6;
 }
 
-message Step {
+message ScenarioStep {
   string id = 1;
   string type = 2;
   string name = 3;
@@ -94,7 +94,7 @@ message Step {
   int32 retry_count = 9;
   repeated string on_success = 10;
   repeated string on_failure = 11;
-  repeated Step children = 12; // For control steps
+  repeated ScenarioStep children = 12; // For control steps
   map<string, string> metadata = 13;
 }
 
@@ -149,7 +149,7 @@ message CrawlStep {
 message ControlStep {
   string type = 1; // if, while, foreach
   string condition = 2;
-  repeated Step body = 3;
+  repeated ScenarioStep body = 3;
   repeated string data_set = 4;
 }
 

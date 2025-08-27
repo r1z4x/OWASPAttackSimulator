@@ -9,13 +9,13 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
-	"github.com/owaspchecker/internal/attack"
-	"github.com/owaspchecker/internal/common"
-	"github.com/owaspchecker/internal/crawl"
-	"github.com/owaspchecker/internal/har"
-	"github.com/owaspchecker/internal/httpx"
-	"github.com/owaspchecker/internal/report"
-	"github.com/owaspchecker/internal/store"
+	"github.com/owaspattacksimulator/internal/attack"
+	"github.com/owaspattacksimulator/internal/common"
+	"github.com/owaspattacksimulator/internal/crawl"
+	"github.com/owaspattacksimulator/internal/har"
+	"github.com/owaspattacksimulator/internal/httpx"
+	"github.com/owaspattacksimulator/internal/report"
+	"github.com/owaspattacksimulator/internal/store"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 )
@@ -29,7 +29,7 @@ type Commands struct {
 
 // NewCommands creates new CLI commands
 func NewCommands() *Commands {
-	store, err := store.NewSQLiteStore("owaspchecker.db")
+	store, err := store.NewSQLiteStore("simulation.db")
 	if err != nil {
 		fmt.Printf("Failed to initialize store: %v\n", err)
 		os.Exit(1)
@@ -49,20 +49,20 @@ func NewCommands() *Commands {
 // setupCommands sets up all CLI commands
 func (c *Commands) setupCommands() {
 	c.rootCmd = &cobra.Command{
-		Use:   "owaspchecker [URL or requests-file]",
+		Use:   "simulation [URL or requests-file]",
 		Short: "OWASP Top 10 Web Application Security Scanner",
-		Long: `OWASPChecker is a comprehensive web application security scanner 
+		Long: `OWASPAttackSimulator is a comprehensive web application security scanner 
 that focuses on OWASP Top 10 vulnerabilities.
 
 Usage:
-  owaspchecker <URL>                    # Attack a website directly
-  owaspchecker <requests-file>          # Attack requests from HAR/JSON file
-  owaspchecker --help                   # Show help
+  simulation <URL>                    # Attack a website directly
+  simulation <requests-file>          # Attack requests from HAR/JSON file
+  simulation --help                   # Show help
 
 Examples:
-  owaspchecker https://example.com
-  owaspchecker requests.har
-  owaspchecker requests.json`,
+  simulation https://example.com
+  simulation requests.har
+  simulation requests.json`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: c.runMain,
 	}
@@ -142,14 +142,12 @@ func (c *Commands) runMain(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// printBanner prints the OWASPChecker banner
+// printBanner prints the OWASPAttackSimulator banner
 func (c *Commands) printBanner() {
 	color.Cyan(`
 ╔══════════════════════════════════════════════════════════════╗
-║                    OWASPChecker v1.0                        ║
+║                OWASPAttackSimulator v1.0                     ║
 ║              OWASP Top 10 Security Scanner                   ║
-║                                                              ║
-║  🔍 Crawl • ⚔️ Attack • 📊 Report • 🛡️ Secure              ║
 ╚══════════════════════════════════════════════════════════════╝
 `)
 }
@@ -190,7 +188,7 @@ func (c *Commands) runAttackURL(targetURL string, concurrency int, delay int, bu
 		ID:          uuid.New().String(),
 		URL:         targetURL,
 		Method:      "GET",
-		Headers:     map[string]string{"User-Agent": "OWASPChecker/1.0"},
+		Headers:     map[string]string{"User-Agent": "OWASPAttackSimulator/1.0"},
 		Body:        "",
 		ContentType: "",
 		Variant:     "direct_url",
@@ -405,7 +403,7 @@ func (c *Commands) runReport(outputFormat string) error {
 
 	// Generate report
 	reporter := report.NewReporter()
-	outputFile := fmt.Sprintf("owaspchecker_report.%s", getFileExtension(outputFormat))
+	outputFile := fmt.Sprintf("simulation_report.%s", getFileExtension(outputFormat))
 
 	config := &common.ReportConfig{
 		OutputFormat:    outputFormat,

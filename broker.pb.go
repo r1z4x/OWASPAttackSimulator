@@ -1794,23 +1794,23 @@ var File_broker_proto protoreflect.FileDescriptor
 
 const file_broker_proto_rawDesc = "" +
 	"\n" +
-	"\fbroker.proto\x12\x13owaspchecker.broker\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8b\x01\n" +
+	"\fbroker.proto\x12\x1bowaspattacksimulator.broker\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8b\x01\n" +
 	"\x12OpenSessionRequest\x12\x1d\n" +
 	"\n" +
 	"target_url\x18\x01 \x01(\tR\ttargetUrl\x12\x19\n" +
 	"\bhar_file\x18\x02 \x01(\tR\aharFile\x12\x1f\n" +
 	"\vcookies_jar\x18\x03 \x01(\tR\n" +
 	"cookiesJar\x12\x1a\n" +
-	"\bheadless\x18\x04 \x01(\bR\bheadless\"y\n" +
+	"\bheadless\x18\x04 \x01(\bR\bheadless\"\x81\x01\n" +
 	"\x13OpenSessionResponse\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12C\n" +
-	"\fsession_info\x18\x02 \x01(\v2 .owaspchecker.broker.SessionInfoR\vsessionInfo\"5\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12K\n" +
+	"\fsession_info\x18\x02 \x01(\v2(.owaspattacksimulator.broker.SessionInfoR\vsessionInfo\"5\n" +
 	"\x14AttachSessionRequest\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\"\\\n" +
-	"\x15AttachSessionResponse\x12C\n" +
-	"\fsession_info\x18\x01 \x01(\v2 .owaspchecker.broker.SessionInfoR\vsessionInfo\"5\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\"d\n" +
+	"\x15AttachSessionResponse\x12K\n" +
+	"\fsession_info\x18\x01 \x01(\v2(.owaspattacksimulator.broker.SessionInfoR\vsessionInfo\"5\n" +
 	"\x14DetachSessionRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\"1\n" +
@@ -1823,31 +1823,31 @@ const file_broker_proto_rawDesc = "" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"2\n" +
 	"\x11GetSessionRequest\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\"Y\n" +
-	"\x12GetSessionResponse\x12C\n" +
-	"\fsession_info\x18\x01 \x01(\v2 .owaspchecker.broker.SessionInfoR\vsessionInfo\"z\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\"a\n" +
+	"\x12GetSessionResponse\x12K\n" +
+	"\fsession_info\x18\x01 \x01(\v2(.owaspattacksimulator.broker.SessionInfoR\vsessionInfo\"\x82\x01\n" +
 	"\x14UpdateSessionRequest\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12C\n" +
-	"\fsession_data\x18\x02 \x01(\v2 .owaspchecker.broker.SessionDataR\vsessionData\"1\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12K\n" +
+	"\fsession_data\x18\x02 \x01(\v2(.owaspattacksimulator.broker.SessionDataR\vsessionData\"1\n" +
 	"\x15UpdateSessionResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x86\x02\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x8e\x02\n" +
 	"\vSessionInfo\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1d\n" +
 	"\n" +
-	"target_url\x18\x02 \x01(\tR\ttargetUrl\x12C\n" +
-	"\fsession_data\x18\x03 \x01(\v2 .owaspchecker.broker.SessionDataR\vsessionData\x129\n" +
+	"target_url\x18\x02 \x01(\tR\ttargetUrl\x12K\n" +
+	"\fsession_data\x18\x03 \x01(\v2(.owaspattacksimulator.broker.SessionDataR\vsessionData\x129\n" +
 	"\n" +
 	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xbb\x03\n" +
-	"\vSessionData\x12G\n" +
-	"\acookies\x18\x01 \x03(\v2-.owaspchecker.broker.SessionData.CookiesEntryR\acookies\x12G\n" +
-	"\aheaders\x18\x02 \x03(\v2-.owaspchecker.broker.SessionData.HeadersEntryR\aheaders\x12\x1d\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xd3\x03\n" +
+	"\vSessionData\x12O\n" +
+	"\acookies\x18\x01 \x03(\v25.owaspattacksimulator.broker.SessionData.CookiesEntryR\acookies\x12O\n" +
+	"\aheaders\x18\x02 \x03(\v25.owaspattacksimulator.broker.SessionData.HeadersEntryR\aheaders\x12\x1d\n" +
 	"\n" +
-	"csrf_token\x18\x03 \x01(\tR\tcsrfToken\x12G\n" +
-	"\astorage\x18\x04 \x03(\v2-.owaspchecker.broker.SessionData.StorageEntryR\astorage\x1a:\n" +
+	"csrf_token\x18\x03 \x01(\tR\tcsrfToken\x12O\n" +
+	"\astorage\x18\x04 \x03(\v25.owaspattacksimulator.broker.SessionData.StorageEntryR\astorage\x1a:\n" +
 	"\fCookiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a:\n" +
@@ -1856,11 +1856,11 @@ const file_broker_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a:\n" +
 	"\fStorageEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"_\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"g\n" +
 	"\x0fPushStepRequest\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12-\n" +
-	"\x04step\x18\x02 \x01(\v2\x19.owaspchecker.broker.StepR\x04step\"C\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x125\n" +
+	"\x04step\x18\x02 \x01(\v2!.owaspattacksimulator.broker.StepR\x04step\"C\n" +
 	"\x10PushStepResponse\x12\x17\n" +
 	"\astep_id\x18\x01 \x01(\tR\x06stepId\x12\x16\n" +
 	"\x06queued\x18\x02 \x01(\bR\x06queued\"K\n" +
@@ -1873,19 +1873,19 @@ const file_broker_proto_rawDesc = "" +
 	"\x14GetStepStatusRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x17\n" +
-	"\astep_id\x18\x02 \x01(\tR\x06stepId\"P\n" +
-	"\x15GetStepStatusResponse\x127\n" +
-	"\x06status\x18\x01 \x01(\v2\x1f.owaspchecker.broker.StepStatusR\x06status\"M\n" +
+	"\astep_id\x18\x02 \x01(\tR\x06stepId\"X\n" +
+	"\x15GetStepStatusResponse\x12?\n" +
+	"\x06status\x18\x01 \x01(\v2'.owaspattacksimulator.broker.StepStatusR\x06status\"M\n" +
 	"\x13StreamEventsRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x17\n" +
-	"\astep_id\x18\x02 \x01(\tR\x06stepId\"\xa4\x04\n" +
+	"\astep_id\x18\x02 \x01(\tR\x06stepId\"\xbc\x04\n" +
 	"\x04Step\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04type\x18\x02 \x01(\tR\x04type\x12=\n" +
-	"\x06inputs\x18\x03 \x03(\v2%.owaspchecker.broker.Step.InputsEntryR\x06inputs\x12=\n" +
-	"\x06guards\x18\x04 \x03(\v2%.owaspchecker.broker.Step.GuardsEntryR\x06guards\x12@\n" +
-	"\aeffects\x18\x05 \x03(\v2&.owaspchecker.broker.Step.EffectsEntryR\aeffects\x12'\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\x12E\n" +
+	"\x06inputs\x18\x03 \x03(\v2-.owaspattacksimulator.broker.Step.InputsEntryR\x06inputs\x12E\n" +
+	"\x06guards\x18\x04 \x03(\v2-.owaspattacksimulator.broker.Step.GuardsEntryR\x06guards\x12H\n" +
+	"\aeffects\x18\x05 \x03(\v2..owaspattacksimulator.broker.Step.EffectsEntryR\aeffects\x12'\n" +
 	"\x0ftimeout_seconds\x18\x06 \x01(\x05R\x0etimeoutSeconds\x12\x1f\n" +
 	"\vretry_count\x18\a \x01(\x05R\n" +
 	"retryCount\x12\x1d\n" +
@@ -1917,15 +1917,15 @@ const file_broker_proto_rawDesc = "" +
 	"\astep_id\x18\x03 \x01(\tR\x06stepId\x12\x12\n" +
 	"\x04kind\x18\x04 \x01(\tR\x04kind\x12\x18\n" +
 	"\apayload\x18\x05 \x01(\fR\apayload\x128\n" +
-	"\ttimestamp\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x9a\x02\n" +
+	"\ttimestamp\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\xa2\x02\n" +
 	"\x13PushArtifactRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x17\n" +
 	"\astep_id\x18\x02 \x01(\tR\x06stepId\x12\x12\n" +
 	"\x04kind\x18\x03 \x01(\tR\x04kind\x12\x12\n" +
 	"\x04path\x18\x04 \x01(\tR\x04path\x12\x12\n" +
-	"\x04data\x18\x05 \x01(\fR\x04data\x12R\n" +
-	"\bmetadata\x18\x06 \x03(\v26.owaspchecker.broker.PushArtifactRequest.MetadataEntryR\bmetadata\x1a;\n" +
+	"\x04data\x18\x05 \x01(\fR\x04data\x12Z\n" +
+	"\bmetadata\x18\x06 \x03(\v2>.owaspattacksimulator.broker.PushArtifactRequest.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"M\n" +
@@ -1937,17 +1937,17 @@ const file_broker_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1f\n" +
 	"\vartifact_id\x18\x02 \x01(\tR\n" +
-	"artifactId\"h\n" +
-	"\x13GetArtifactResponse\x12=\n" +
-	"\bartifact\x18\x01 \x01(\v2!.owaspchecker.broker.ArtifactInfoR\bartifact\x12\x12\n" +
+	"artifactId\"p\n" +
+	"\x13GetArtifactResponse\x12E\n" +
+	"\bartifact\x18\x01 \x01(\v2).owaspattacksimulator.broker.ArtifactInfoR\bartifact\x12\x12\n" +
 	"\x04data\x18\x02 \x01(\fR\x04data\"b\n" +
 	"\x14ListArtifactsRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x17\n" +
 	"\astep_id\x18\x02 \x01(\tR\x06stepId\x12\x12\n" +
-	"\x04kind\x18\x03 \x01(\tR\x04kind\"X\n" +
-	"\x15ListArtifactsResponse\x12?\n" +
-	"\tartifacts\x18\x01 \x03(\v2!.owaspchecker.broker.ArtifactInfoR\tartifacts\"\xd4\x02\n" +
+	"\x04kind\x18\x03 \x01(\tR\x04kind\"`\n" +
+	"\x15ListArtifactsResponse\x12G\n" +
+	"\tartifacts\x18\x01 \x03(\v2).owaspattacksimulator.broker.ArtifactInfoR\tartifacts\"\xdc\x02\n" +
 	"\fArtifactInfo\x12\x1f\n" +
 	"\vartifact_id\x18\x01 \x01(\tR\n" +
 	"artifactId\x12\x1d\n" +
@@ -1955,31 +1955,31 @@ const file_broker_proto_rawDesc = "" +
 	"session_id\x18\x02 \x01(\tR\tsessionId\x12\x17\n" +
 	"\astep_id\x18\x03 \x01(\tR\x06stepId\x12\x12\n" +
 	"\x04kind\x18\x04 \x01(\tR\x04kind\x12\x12\n" +
-	"\x04path\x18\x05 \x01(\tR\x04path\x12K\n" +
-	"\bmetadata\x18\x06 \x03(\v2/.owaspchecker.broker.ArtifactInfo.MetadataEntryR\bmetadata\x129\n" +
+	"\x04path\x18\x05 \x01(\tR\x04path\x12S\n" +
+	"\bmetadata\x18\x06 \x03(\v27.owaspattacksimulator.broker.ArtifactInfo.MetadataEntryR\bmetadata\x129\n" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\xee\x04\n" +
-	"\x0eSessionService\x12`\n" +
-	"\vOpenSession\x12'.owaspchecker.broker.OpenSessionRequest\x1a(.owaspchecker.broker.OpenSessionResponse\x12f\n" +
-	"\rAttachSession\x12).owaspchecker.broker.AttachSessionRequest\x1a*.owaspchecker.broker.AttachSessionResponse\x12f\n" +
-	"\rDetachSession\x12).owaspchecker.broker.DetachSessionRequest\x1a*.owaspchecker.broker.DetachSessionResponse\x12c\n" +
-	"\fCloseSession\x12(.owaspchecker.broker.CloseSessionRequest\x1a).owaspchecker.broker.CloseSessionResponse\x12]\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\xce\x05\n" +
+	"\x0eSessionService\x12p\n" +
+	"\vOpenSession\x12/.owaspattacksimulator.broker.OpenSessionRequest\x1a0.owaspattacksimulator.broker.OpenSessionResponse\x12v\n" +
+	"\rAttachSession\x121.owaspattacksimulator.broker.AttachSessionRequest\x1a2.owaspattacksimulator.broker.AttachSessionResponse\x12v\n" +
+	"\rDetachSession\x121.owaspattacksimulator.broker.DetachSessionRequest\x1a2.owaspattacksimulator.broker.DetachSessionResponse\x12s\n" +
+	"\fCloseSession\x120.owaspattacksimulator.broker.CloseSessionRequest\x1a1.owaspattacksimulator.broker.CloseSessionResponse\x12m\n" +
 	"\n" +
-	"GetSession\x12&.owaspchecker.broker.GetSessionRequest\x1a'.owaspchecker.broker.GetSessionResponse\x12f\n" +
-	"\rUpdateSession\x12).owaspchecker.broker.UpdateSessionRequest\x1a*.owaspchecker.broker.UpdateSessionResponse2\x85\x03\n" +
-	"\vStepService\x12W\n" +
-	"\bPushStep\x12$.owaspchecker.broker.PushStepRequest\x1a%.owaspchecker.broker.PushStepResponse\x12]\n" +
+	"GetSession\x12..owaspattacksimulator.broker.GetSessionRequest\x1a/.owaspattacksimulator.broker.GetSessionResponse\x12v\n" +
+	"\rUpdateSession\x121.owaspattacksimulator.broker.UpdateSessionRequest\x1a2.owaspattacksimulator.broker.UpdateSessionResponse2\xc5\x03\n" +
+	"\vStepService\x12g\n" +
+	"\bPushStep\x12,.owaspattacksimulator.broker.PushStepRequest\x1a-.owaspattacksimulator.broker.PushStepResponse\x12m\n" +
 	"\n" +
-	"CancelStep\x12&.owaspchecker.broker.CancelStepRequest\x1a'.owaspchecker.broker.CancelStepResponse\x12f\n" +
-	"\rGetStepStatus\x12).owaspchecker.broker.GetStepStatusRequest\x1a*.owaspchecker.broker.GetStepStatusResponse\x12V\n" +
-	"\fStreamEvents\x12(.owaspchecker.broker.StreamEventsRequest\x1a\x1a.owaspchecker.broker.Event0\x012\xc0\x02\n" +
-	"\x0fArtifactService\x12c\n" +
-	"\fPushArtifact\x12(.owaspchecker.broker.PushArtifactRequest\x1a).owaspchecker.broker.PushArtifactResponse\x12`\n" +
-	"\vGetArtifact\x12'.owaspchecker.broker.GetArtifactRequest\x1a(.owaspchecker.broker.GetArtifactResponse\x12f\n" +
-	"\rListArtifacts\x12).owaspchecker.broker.ListArtifactsRequest\x1a*.owaspchecker.broker.ListArtifactsResponseB)Z'github.com/owaspchecker/api/proto;protob\x06proto3"
+	"CancelStep\x12..owaspattacksimulator.broker.CancelStepRequest\x1a/.owaspattacksimulator.broker.CancelStepResponse\x12v\n" +
+	"\rGetStepStatus\x121.owaspattacksimulator.broker.GetStepStatusRequest\x1a2.owaspattacksimulator.broker.GetStepStatusResponse\x12f\n" +
+	"\fStreamEvents\x120.owaspattacksimulator.broker.StreamEventsRequest\x1a\".owaspattacksimulator.broker.Event0\x012\xf0\x02\n" +
+	"\x0fArtifactService\x12s\n" +
+	"\fPushArtifact\x120.owaspattacksimulator.broker.PushArtifactRequest\x1a1.owaspattacksimulator.broker.PushArtifactResponse\x12p\n" +
+	"\vGetArtifact\x12/.owaspattacksimulator.broker.GetArtifactRequest\x1a0.owaspattacksimulator.broker.GetArtifactResponse\x12v\n" +
+	"\rListArtifacts\x121.owaspattacksimulator.broker.ListArtifactsRequest\x1a2.owaspattacksimulator.broker.ListArtifactsResponseB1Z/github.com/owaspattacksimulator/api/proto;protob\x06proto3"
 
 var (
 	file_broker_proto_rawDescOnce sync.Once
@@ -1995,97 +1995,97 @@ func file_broker_proto_rawDescGZIP() []byte {
 
 var file_broker_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
 var file_broker_proto_goTypes = []any{
-	(*OpenSessionRequest)(nil),    // 0: owaspchecker.broker.OpenSessionRequest
-	(*OpenSessionResponse)(nil),   // 1: owaspchecker.broker.OpenSessionResponse
-	(*AttachSessionRequest)(nil),  // 2: owaspchecker.broker.AttachSessionRequest
-	(*AttachSessionResponse)(nil), // 3: owaspchecker.broker.AttachSessionResponse
-	(*DetachSessionRequest)(nil),  // 4: owaspchecker.broker.DetachSessionRequest
-	(*DetachSessionResponse)(nil), // 5: owaspchecker.broker.DetachSessionResponse
-	(*CloseSessionRequest)(nil),   // 6: owaspchecker.broker.CloseSessionRequest
-	(*CloseSessionResponse)(nil),  // 7: owaspchecker.broker.CloseSessionResponse
-	(*GetSessionRequest)(nil),     // 8: owaspchecker.broker.GetSessionRequest
-	(*GetSessionResponse)(nil),    // 9: owaspchecker.broker.GetSessionResponse
-	(*UpdateSessionRequest)(nil),  // 10: owaspchecker.broker.UpdateSessionRequest
-	(*UpdateSessionResponse)(nil), // 11: owaspchecker.broker.UpdateSessionResponse
-	(*SessionInfo)(nil),           // 12: owaspchecker.broker.SessionInfo
-	(*SessionData)(nil),           // 13: owaspchecker.broker.SessionData
-	(*PushStepRequest)(nil),       // 14: owaspchecker.broker.PushStepRequest
-	(*PushStepResponse)(nil),      // 15: owaspchecker.broker.PushStepResponse
-	(*CancelStepRequest)(nil),     // 16: owaspchecker.broker.CancelStepRequest
-	(*CancelStepResponse)(nil),    // 17: owaspchecker.broker.CancelStepResponse
-	(*GetStepStatusRequest)(nil),  // 18: owaspchecker.broker.GetStepStatusRequest
-	(*GetStepStatusResponse)(nil), // 19: owaspchecker.broker.GetStepStatusResponse
-	(*StreamEventsRequest)(nil),   // 20: owaspchecker.broker.StreamEventsRequest
-	(*Step)(nil),                  // 21: owaspchecker.broker.Step
-	(*StepStatus)(nil),            // 22: owaspchecker.broker.StepStatus
-	(*Event)(nil),                 // 23: owaspchecker.broker.Event
-	(*PushArtifactRequest)(nil),   // 24: owaspchecker.broker.PushArtifactRequest
-	(*PushArtifactResponse)(nil),  // 25: owaspchecker.broker.PushArtifactResponse
-	(*GetArtifactRequest)(nil),    // 26: owaspchecker.broker.GetArtifactRequest
-	(*GetArtifactResponse)(nil),   // 27: owaspchecker.broker.GetArtifactResponse
-	(*ListArtifactsRequest)(nil),  // 28: owaspchecker.broker.ListArtifactsRequest
-	(*ListArtifactsResponse)(nil), // 29: owaspchecker.broker.ListArtifactsResponse
-	(*ArtifactInfo)(nil),          // 30: owaspchecker.broker.ArtifactInfo
-	nil,                           // 31: owaspchecker.broker.SessionData.CookiesEntry
-	nil,                           // 32: owaspchecker.broker.SessionData.HeadersEntry
-	nil,                           // 33: owaspchecker.broker.SessionData.StorageEntry
-	nil,                           // 34: owaspchecker.broker.Step.InputsEntry
-	nil,                           // 35: owaspchecker.broker.Step.GuardsEntry
-	nil,                           // 36: owaspchecker.broker.Step.EffectsEntry
-	nil,                           // 37: owaspchecker.broker.PushArtifactRequest.MetadataEntry
-	nil,                           // 38: owaspchecker.broker.ArtifactInfo.MetadataEntry
+	(*OpenSessionRequest)(nil),    // 0: owaspattacksimulator.broker.OpenSessionRequest
+	(*OpenSessionResponse)(nil),   // 1: owaspattacksimulator.broker.OpenSessionResponse
+	(*AttachSessionRequest)(nil),  // 2: owaspattacksimulator.broker.AttachSessionRequest
+	(*AttachSessionResponse)(nil), // 3: owaspattacksimulator.broker.AttachSessionResponse
+	(*DetachSessionRequest)(nil),  // 4: owaspattacksimulator.broker.DetachSessionRequest
+	(*DetachSessionResponse)(nil), // 5: owaspattacksimulator.broker.DetachSessionResponse
+	(*CloseSessionRequest)(nil),   // 6: owaspattacksimulator.broker.CloseSessionRequest
+	(*CloseSessionResponse)(nil),  // 7: owaspattacksimulator.broker.CloseSessionResponse
+	(*GetSessionRequest)(nil),     // 8: owaspattacksimulator.broker.GetSessionRequest
+	(*GetSessionResponse)(nil),    // 9: owaspattacksimulator.broker.GetSessionResponse
+	(*UpdateSessionRequest)(nil),  // 10: owaspattacksimulator.broker.UpdateSessionRequest
+	(*UpdateSessionResponse)(nil), // 11: owaspattacksimulator.broker.UpdateSessionResponse
+	(*SessionInfo)(nil),           // 12: owaspattacksimulator.broker.SessionInfo
+	(*SessionData)(nil),           // 13: owaspattacksimulator.broker.SessionData
+	(*PushStepRequest)(nil),       // 14: owaspattacksimulator.broker.PushStepRequest
+	(*PushStepResponse)(nil),      // 15: owaspattacksimulator.broker.PushStepResponse
+	(*CancelStepRequest)(nil),     // 16: owaspattacksimulator.broker.CancelStepRequest
+	(*CancelStepResponse)(nil),    // 17: owaspattacksimulator.broker.CancelStepResponse
+	(*GetStepStatusRequest)(nil),  // 18: owaspattacksimulator.broker.GetStepStatusRequest
+	(*GetStepStatusResponse)(nil), // 19: owaspattacksimulator.broker.GetStepStatusResponse
+	(*StreamEventsRequest)(nil),   // 20: owaspattacksimulator.broker.StreamEventsRequest
+	(*Step)(nil),                  // 21: owaspattacksimulator.broker.Step
+	(*StepStatus)(nil),            // 22: owaspattacksimulator.broker.StepStatus
+	(*Event)(nil),                 // 23: owaspattacksimulator.broker.Event
+	(*PushArtifactRequest)(nil),   // 24: owaspattacksimulator.broker.PushArtifactRequest
+	(*PushArtifactResponse)(nil),  // 25: owaspattacksimulator.broker.PushArtifactResponse
+	(*GetArtifactRequest)(nil),    // 26: owaspattacksimulator.broker.GetArtifactRequest
+	(*GetArtifactResponse)(nil),   // 27: owaspattacksimulator.broker.GetArtifactResponse
+	(*ListArtifactsRequest)(nil),  // 28: owaspattacksimulator.broker.ListArtifactsRequest
+	(*ListArtifactsResponse)(nil), // 29: owaspattacksimulator.broker.ListArtifactsResponse
+	(*ArtifactInfo)(nil),          // 30: owaspattacksimulator.broker.ArtifactInfo
+	nil,                           // 31: owaspattacksimulator.broker.SessionData.CookiesEntry
+	nil,                           // 32: owaspattacksimulator.broker.SessionData.HeadersEntry
+	nil,                           // 33: owaspattacksimulator.broker.SessionData.StorageEntry
+	nil,                           // 34: owaspattacksimulator.broker.Step.InputsEntry
+	nil,                           // 35: owaspattacksimulator.broker.Step.GuardsEntry
+	nil,                           // 36: owaspattacksimulator.broker.Step.EffectsEntry
+	nil,                           // 37: owaspattacksimulator.broker.PushArtifactRequest.MetadataEntry
+	nil,                           // 38: owaspattacksimulator.broker.ArtifactInfo.MetadataEntry
 	(*timestamppb.Timestamp)(nil), // 39: google.protobuf.Timestamp
 }
 var file_broker_proto_depIdxs = []int32{
-	12, // 0: owaspchecker.broker.OpenSessionResponse.session_info:type_name -> owaspchecker.broker.SessionInfo
-	12, // 1: owaspchecker.broker.AttachSessionResponse.session_info:type_name -> owaspchecker.broker.SessionInfo
-	12, // 2: owaspchecker.broker.GetSessionResponse.session_info:type_name -> owaspchecker.broker.SessionInfo
-	13, // 3: owaspchecker.broker.UpdateSessionRequest.session_data:type_name -> owaspchecker.broker.SessionData
-	13, // 4: owaspchecker.broker.SessionInfo.session_data:type_name -> owaspchecker.broker.SessionData
-	39, // 5: owaspchecker.broker.SessionInfo.created_at:type_name -> google.protobuf.Timestamp
-	39, // 6: owaspchecker.broker.SessionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	31, // 7: owaspchecker.broker.SessionData.cookies:type_name -> owaspchecker.broker.SessionData.CookiesEntry
-	32, // 8: owaspchecker.broker.SessionData.headers:type_name -> owaspchecker.broker.SessionData.HeadersEntry
-	33, // 9: owaspchecker.broker.SessionData.storage:type_name -> owaspchecker.broker.SessionData.StorageEntry
-	21, // 10: owaspchecker.broker.PushStepRequest.step:type_name -> owaspchecker.broker.Step
-	22, // 11: owaspchecker.broker.GetStepStatusResponse.status:type_name -> owaspchecker.broker.StepStatus
-	34, // 12: owaspchecker.broker.Step.inputs:type_name -> owaspchecker.broker.Step.InputsEntry
-	35, // 13: owaspchecker.broker.Step.guards:type_name -> owaspchecker.broker.Step.GuardsEntry
-	36, // 14: owaspchecker.broker.Step.effects:type_name -> owaspchecker.broker.Step.EffectsEntry
-	39, // 15: owaspchecker.broker.StepStatus.started_at:type_name -> google.protobuf.Timestamp
-	39, // 16: owaspchecker.broker.StepStatus.completed_at:type_name -> google.protobuf.Timestamp
-	39, // 17: owaspchecker.broker.Event.timestamp:type_name -> google.protobuf.Timestamp
-	37, // 18: owaspchecker.broker.PushArtifactRequest.metadata:type_name -> owaspchecker.broker.PushArtifactRequest.MetadataEntry
-	30, // 19: owaspchecker.broker.GetArtifactResponse.artifact:type_name -> owaspchecker.broker.ArtifactInfo
-	30, // 20: owaspchecker.broker.ListArtifactsResponse.artifacts:type_name -> owaspchecker.broker.ArtifactInfo
-	38, // 21: owaspchecker.broker.ArtifactInfo.metadata:type_name -> owaspchecker.broker.ArtifactInfo.MetadataEntry
-	39, // 22: owaspchecker.broker.ArtifactInfo.created_at:type_name -> google.protobuf.Timestamp
-	0,  // 23: owaspchecker.broker.SessionService.OpenSession:input_type -> owaspchecker.broker.OpenSessionRequest
-	2,  // 24: owaspchecker.broker.SessionService.AttachSession:input_type -> owaspchecker.broker.AttachSessionRequest
-	4,  // 25: owaspchecker.broker.SessionService.DetachSession:input_type -> owaspchecker.broker.DetachSessionRequest
-	6,  // 26: owaspchecker.broker.SessionService.CloseSession:input_type -> owaspchecker.broker.CloseSessionRequest
-	8,  // 27: owaspchecker.broker.SessionService.GetSession:input_type -> owaspchecker.broker.GetSessionRequest
-	10, // 28: owaspchecker.broker.SessionService.UpdateSession:input_type -> owaspchecker.broker.UpdateSessionRequest
-	14, // 29: owaspchecker.broker.StepService.PushStep:input_type -> owaspchecker.broker.PushStepRequest
-	16, // 30: owaspchecker.broker.StepService.CancelStep:input_type -> owaspchecker.broker.CancelStepRequest
-	18, // 31: owaspchecker.broker.StepService.GetStepStatus:input_type -> owaspchecker.broker.GetStepStatusRequest
-	20, // 32: owaspchecker.broker.StepService.StreamEvents:input_type -> owaspchecker.broker.StreamEventsRequest
-	24, // 33: owaspchecker.broker.ArtifactService.PushArtifact:input_type -> owaspchecker.broker.PushArtifactRequest
-	26, // 34: owaspchecker.broker.ArtifactService.GetArtifact:input_type -> owaspchecker.broker.GetArtifactRequest
-	28, // 35: owaspchecker.broker.ArtifactService.ListArtifacts:input_type -> owaspchecker.broker.ListArtifactsRequest
-	1,  // 36: owaspchecker.broker.SessionService.OpenSession:output_type -> owaspchecker.broker.OpenSessionResponse
-	3,  // 37: owaspchecker.broker.SessionService.AttachSession:output_type -> owaspchecker.broker.AttachSessionResponse
-	5,  // 38: owaspchecker.broker.SessionService.DetachSession:output_type -> owaspchecker.broker.DetachSessionResponse
-	7,  // 39: owaspchecker.broker.SessionService.CloseSession:output_type -> owaspchecker.broker.CloseSessionResponse
-	9,  // 40: owaspchecker.broker.SessionService.GetSession:output_type -> owaspchecker.broker.GetSessionResponse
-	11, // 41: owaspchecker.broker.SessionService.UpdateSession:output_type -> owaspchecker.broker.UpdateSessionResponse
-	15, // 42: owaspchecker.broker.StepService.PushStep:output_type -> owaspchecker.broker.PushStepResponse
-	17, // 43: owaspchecker.broker.StepService.CancelStep:output_type -> owaspchecker.broker.CancelStepResponse
-	19, // 44: owaspchecker.broker.StepService.GetStepStatus:output_type -> owaspchecker.broker.GetStepStatusResponse
-	23, // 45: owaspchecker.broker.StepService.StreamEvents:output_type -> owaspchecker.broker.Event
-	25, // 46: owaspchecker.broker.ArtifactService.PushArtifact:output_type -> owaspchecker.broker.PushArtifactResponse
-	27, // 47: owaspchecker.broker.ArtifactService.GetArtifact:output_type -> owaspchecker.broker.GetArtifactResponse
-	29, // 48: owaspchecker.broker.ArtifactService.ListArtifacts:output_type -> owaspchecker.broker.ListArtifactsResponse
+	12, // 0: owaspattacksimulator.broker.OpenSessionResponse.session_info:type_name -> owaspattacksimulator.broker.SessionInfo
+	12, // 1: owaspattacksimulator.broker.AttachSessionResponse.session_info:type_name -> owaspattacksimulator.broker.SessionInfo
+	12, // 2: owaspattacksimulator.broker.GetSessionResponse.session_info:type_name -> owaspattacksimulator.broker.SessionInfo
+	13, // 3: owaspattacksimulator.broker.UpdateSessionRequest.session_data:type_name -> owaspattacksimulator.broker.SessionData
+	13, // 4: owaspattacksimulator.broker.SessionInfo.session_data:type_name -> owaspattacksimulator.broker.SessionData
+	39, // 5: owaspattacksimulator.broker.SessionInfo.created_at:type_name -> google.protobuf.Timestamp
+	39, // 6: owaspattacksimulator.broker.SessionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	31, // 7: owaspattacksimulator.broker.SessionData.cookies:type_name -> owaspattacksimulator.broker.SessionData.CookiesEntry
+	32, // 8: owaspattacksimulator.broker.SessionData.headers:type_name -> owaspattacksimulator.broker.SessionData.HeadersEntry
+	33, // 9: owaspattacksimulator.broker.SessionData.storage:type_name -> owaspattacksimulator.broker.SessionData.StorageEntry
+	21, // 10: owaspattacksimulator.broker.PushStepRequest.step:type_name -> owaspattacksimulator.broker.Step
+	22, // 11: owaspattacksimulator.broker.GetStepStatusResponse.status:type_name -> owaspattacksimulator.broker.StepStatus
+	34, // 12: owaspattacksimulator.broker.Step.inputs:type_name -> owaspattacksimulator.broker.Step.InputsEntry
+	35, // 13: owaspattacksimulator.broker.Step.guards:type_name -> owaspattacksimulator.broker.Step.GuardsEntry
+	36, // 14: owaspattacksimulator.broker.Step.effects:type_name -> owaspattacksimulator.broker.Step.EffectsEntry
+	39, // 15: owaspattacksimulator.broker.StepStatus.started_at:type_name -> google.protobuf.Timestamp
+	39, // 16: owaspattacksimulator.broker.StepStatus.completed_at:type_name -> google.protobuf.Timestamp
+	39, // 17: owaspattacksimulator.broker.Event.timestamp:type_name -> google.protobuf.Timestamp
+	37, // 18: owaspattacksimulator.broker.PushArtifactRequest.metadata:type_name -> owaspattacksimulator.broker.PushArtifactRequest.MetadataEntry
+	30, // 19: owaspattacksimulator.broker.GetArtifactResponse.artifact:type_name -> owaspattacksimulator.broker.ArtifactInfo
+	30, // 20: owaspattacksimulator.broker.ListArtifactsResponse.artifacts:type_name -> owaspattacksimulator.broker.ArtifactInfo
+	38, // 21: owaspattacksimulator.broker.ArtifactInfo.metadata:type_name -> owaspattacksimulator.broker.ArtifactInfo.MetadataEntry
+	39, // 22: owaspattacksimulator.broker.ArtifactInfo.created_at:type_name -> google.protobuf.Timestamp
+	0,  // 23: owaspattacksimulator.broker.SessionService.OpenSession:input_type -> owaspattacksimulator.broker.OpenSessionRequest
+	2,  // 24: owaspattacksimulator.broker.SessionService.AttachSession:input_type -> owaspattacksimulator.broker.AttachSessionRequest
+	4,  // 25: owaspattacksimulator.broker.SessionService.DetachSession:input_type -> owaspattacksimulator.broker.DetachSessionRequest
+	6,  // 26: owaspattacksimulator.broker.SessionService.CloseSession:input_type -> owaspattacksimulator.broker.CloseSessionRequest
+	8,  // 27: owaspattacksimulator.broker.SessionService.GetSession:input_type -> owaspattacksimulator.broker.GetSessionRequest
+	10, // 28: owaspattacksimulator.broker.SessionService.UpdateSession:input_type -> owaspattacksimulator.broker.UpdateSessionRequest
+	14, // 29: owaspattacksimulator.broker.StepService.PushStep:input_type -> owaspattacksimulator.broker.PushStepRequest
+	16, // 30: owaspattacksimulator.broker.StepService.CancelStep:input_type -> owaspattacksimulator.broker.CancelStepRequest
+	18, // 31: owaspattacksimulator.broker.StepService.GetStepStatus:input_type -> owaspattacksimulator.broker.GetStepStatusRequest
+	20, // 32: owaspattacksimulator.broker.StepService.StreamEvents:input_type -> owaspattacksimulator.broker.StreamEventsRequest
+	24, // 33: owaspattacksimulator.broker.ArtifactService.PushArtifact:input_type -> owaspattacksimulator.broker.PushArtifactRequest
+	26, // 34: owaspattacksimulator.broker.ArtifactService.GetArtifact:input_type -> owaspattacksimulator.broker.GetArtifactRequest
+	28, // 35: owaspattacksimulator.broker.ArtifactService.ListArtifacts:input_type -> owaspattacksimulator.broker.ListArtifactsRequest
+	1,  // 36: owaspattacksimulator.broker.SessionService.OpenSession:output_type -> owaspattacksimulator.broker.OpenSessionResponse
+	3,  // 37: owaspattacksimulator.broker.SessionService.AttachSession:output_type -> owaspattacksimulator.broker.AttachSessionResponse
+	5,  // 38: owaspattacksimulator.broker.SessionService.DetachSession:output_type -> owaspattacksimulator.broker.DetachSessionResponse
+	7,  // 39: owaspattacksimulator.broker.SessionService.CloseSession:output_type -> owaspattacksimulator.broker.CloseSessionResponse
+	9,  // 40: owaspattacksimulator.broker.SessionService.GetSession:output_type -> owaspattacksimulator.broker.GetSessionResponse
+	11, // 41: owaspattacksimulator.broker.SessionService.UpdateSession:output_type -> owaspattacksimulator.broker.UpdateSessionResponse
+	15, // 42: owaspattacksimulator.broker.StepService.PushStep:output_type -> owaspattacksimulator.broker.PushStepResponse
+	17, // 43: owaspattacksimulator.broker.StepService.CancelStep:output_type -> owaspattacksimulator.broker.CancelStepResponse
+	19, // 44: owaspattacksimulator.broker.StepService.GetStepStatus:output_type -> owaspattacksimulator.broker.GetStepStatusResponse
+	23, // 45: owaspattacksimulator.broker.StepService.StreamEvents:output_type -> owaspattacksimulator.broker.Event
+	25, // 46: owaspattacksimulator.broker.ArtifactService.PushArtifact:output_type -> owaspattacksimulator.broker.PushArtifactResponse
+	27, // 47: owaspattacksimulator.broker.ArtifactService.GetArtifact:output_type -> owaspattacksimulator.broker.GetArtifactResponse
+	29, // 48: owaspattacksimulator.broker.ArtifactService.ListArtifacts:output_type -> owaspattacksimulator.broker.ListArtifactsResponse
 	36, // [36:49] is the sub-list for method output_type
 	23, // [23:36] is the sub-list for method input_type
 	23, // [23:23] is the sub-list for extension type_name

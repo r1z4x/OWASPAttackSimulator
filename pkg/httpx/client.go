@@ -33,7 +33,7 @@ func NewClient(timeout time.Duration) *Client {
 			},
 		},
 		timeout:   timeout,
-		userAgent: "OWASPChecker/1.0",
+		userAgent: "OWASPAttackSimulator/1.0",
 	}
 }
 
@@ -53,6 +53,9 @@ type Response struct {
 	Body       []byte
 	Duration   time.Duration
 	URL        string
+	Parameter  string // Parameter that was tested
+	Payload    string // Payload that was used
+	AttackType string // Attack type that was used
 }
 
 // DoRequest performs an HTTP request
@@ -127,13 +130,13 @@ type AttackRequest struct {
 
 // AttackResponse represents an attack response with vulnerability info
 type AttackResponse struct {
-	Response     *Response
-	Vulnerable   bool
-	VulnType     string
-	Evidence     string
-	Payload      string
-	Parameter    string
-	Confidence   float64
+	Response   *Response
+	Vulnerable bool
+	VulnType   string
+	Evidence   string
+	Payload    string
+	Parameter  string
+	Confidence float64
 }
 
 // PerformAttack performs an attack with the given payload

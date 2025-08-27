@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/owaspchecker/internal/checks"
-	"github.com/owaspchecker/internal/common"
-	"github.com/owaspchecker/internal/httpx"
-	"github.com/owaspchecker/internal/mutate"
+	"github.com/owaspattacksimulator/internal/checks"
+	"github.com/owaspattacksimulator/internal/common"
+	"github.com/owaspattacksimulator/internal/httpx"
+	"github.com/owaspattacksimulator/internal/mutate"
 	"github.com/schollz/progressbar/v3"
 )
 

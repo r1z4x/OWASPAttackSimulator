@@ -12,9 +12,9 @@ services:
       - ./configs:/app/configs:ro
       - ./plugins:/app/plugins:ro
     environment:
-      - OWASPCHECKER_CONFIG=/app/configs/defaults.yaml
-      - OWASPCHECKER_DB_PATH=/app/data/owaspchecker.db
-      - OWASPCHECKER_GUI_URL=http://simulation-gui:3000
+      - SIMULATION_CONFIG=/app/configs/defaults.yaml
+      - SIMULATION_DB_PATH=/app/data/simulation.db
+      - SIMULATION_GUI_URL=http://simulation-gui:3000
     networks:
       - simulation-network
     restart: unless-stopped
@@ -39,7 +39,7 @@ services:
       - ./configs:/app/configs:ro
     environment:
       - NODE_ENV=production
-      - OWASPCHECKER_BROKER_URL=grpc://simulation-cli:50051
+      - SIMULATION_BROKER_URL=grpc://simulation-cli:50051
     networks:
       - simulation-network
     depends_on:
@@ -67,8 +67,8 @@ services:
       - ./configs:/app/configs:ro
       - ./plugins:/app/plugins:ro
     environment:
-      - OWASPCHECKER_CONFIG=/app/configs/defaults.yaml
-      - OWASPCHECKER_DB_PATH=/app/data/owaspchecker.db
+      - SIMULATION_CONFIG=/app/configs/defaults.yaml
+      - SIMULATION_DB_PATH=/app/data/simulation.db
     networks:
       - simulation-network
     restart: unless-stopped

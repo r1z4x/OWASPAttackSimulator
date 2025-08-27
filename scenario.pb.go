@@ -588,7 +588,7 @@ type Scenario struct {
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
 	Variables     map[string]string      `protobuf:"bytes,4,rep,name=variables,proto3" json:"variables,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Steps         []*Step                `protobuf:"bytes,5,rep,name=steps,proto3" json:"steps,omitempty"`
+	Steps         []*ScenarioStep        `protobuf:"bytes,5,rep,name=steps,proto3" json:"steps,omitempty"`
 	Metadata      map[string]string      `protobuf:"bytes,6,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -652,7 +652,7 @@ func (x *Scenario) GetVariables() map[string]string {
 	return nil
 }
 
-func (x *Scenario) GetSteps() []*Step {
+func (x *Scenario) GetSteps() []*ScenarioStep {
 	if x != nil {
 		return x.Steps
 	}
@@ -666,7 +666,7 @@ func (x *Scenario) GetMetadata() map[string]string {
 	return nil
 }
 
-type Step struct {
+type ScenarioStep struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Type           string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
@@ -679,26 +679,26 @@ type Step struct {
 	RetryCount     int32                  `protobuf:"varint,9,opt,name=retry_count,json=retryCount,proto3" json:"retry_count,omitempty"`
 	OnSuccess      []string               `protobuf:"bytes,10,rep,name=on_success,json=onSuccess,proto3" json:"on_success,omitempty"`
 	OnFailure      []string               `protobuf:"bytes,11,rep,name=on_failure,json=onFailure,proto3" json:"on_failure,omitempty"`
-	Children       []*Step                `protobuf:"bytes,12,rep,name=children,proto3" json:"children,omitempty"` // For control steps
+	Children       []*ScenarioStep        `protobuf:"bytes,12,rep,name=children,proto3" json:"children,omitempty"` // For control steps
 	Metadata       map[string]string      `protobuf:"bytes,13,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *Step) Reset() {
-	*x = Step{}
+func (x *ScenarioStep) Reset() {
+	*x = ScenarioStep{}
 	mi := &file_scenario_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Step) String() string {
+func (x *ScenarioStep) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Step) ProtoMessage() {}
+func (*ScenarioStep) ProtoMessage() {}
 
-func (x *Step) ProtoReflect() protoreflect.Message {
+func (x *ScenarioStep) ProtoReflect() protoreflect.Message {
 	mi := &file_scenario_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -710,96 +710,96 @@ func (x *Step) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Step.ProtoReflect.Descriptor instead.
-func (*Step) Descriptor() ([]byte, []int) {
+// Deprecated: Use ScenarioStep.ProtoReflect.Descriptor instead.
+func (*ScenarioStep) Descriptor() ([]byte, []int) {
 	return file_scenario_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *Step) GetId() string {
+func (x *ScenarioStep) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *Step) GetType() string {
+func (x *ScenarioStep) GetType() string {
 	if x != nil {
 		return x.Type
 	}
 	return ""
 }
 
-func (x *Step) GetName() string {
+func (x *ScenarioStep) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *Step) GetDescription() string {
+func (x *ScenarioStep) GetDescription() string {
 	if x != nil {
 		return x.Description
 	}
 	return ""
 }
 
-func (x *Step) GetInputs() map[string]string {
+func (x *ScenarioStep) GetInputs() map[string]string {
 	if x != nil {
 		return x.Inputs
 	}
 	return nil
 }
 
-func (x *Step) GetGuards() map[string]string {
+func (x *ScenarioStep) GetGuards() map[string]string {
 	if x != nil {
 		return x.Guards
 	}
 	return nil
 }
 
-func (x *Step) GetEffects() map[string]string {
+func (x *ScenarioStep) GetEffects() map[string]string {
 	if x != nil {
 		return x.Effects
 	}
 	return nil
 }
 
-func (x *Step) GetTimeoutSeconds() int32 {
+func (x *ScenarioStep) GetTimeoutSeconds() int32 {
 	if x != nil {
 		return x.TimeoutSeconds
 	}
 	return 0
 }
 
-func (x *Step) GetRetryCount() int32 {
+func (x *ScenarioStep) GetRetryCount() int32 {
 	if x != nil {
 		return x.RetryCount
 	}
 	return 0
 }
 
-func (x *Step) GetOnSuccess() []string {
+func (x *ScenarioStep) GetOnSuccess() []string {
 	if x != nil {
 		return x.OnSuccess
 	}
 	return nil
 }
 
-func (x *Step) GetOnFailure() []string {
+func (x *ScenarioStep) GetOnFailure() []string {
 	if x != nil {
 		return x.OnFailure
 	}
 	return nil
 }
 
-func (x *Step) GetChildren() []*Step {
+func (x *ScenarioStep) GetChildren() []*ScenarioStep {
 	if x != nil {
 		return x.Children
 	}
 	return nil
 }
 
-func (x *Step) GetMetadata() map[string]string {
+func (x *ScenarioStep) GetMetadata() map[string]string {
 	if x != nil {
 		return x.Metadata
 	}
@@ -1259,7 +1259,7 @@ type ControlStep struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"` // if, while, foreach
 	Condition     string                 `protobuf:"bytes,2,opt,name=condition,proto3" json:"condition,omitempty"`
-	Body          []*Step                `protobuf:"bytes,3,rep,name=body,proto3" json:"body,omitempty"`
+	Body          []*ScenarioStep        `protobuf:"bytes,3,rep,name=body,proto3" json:"body,omitempty"`
 	DataSet       []string               `protobuf:"bytes,4,rep,name=data_set,json=dataSet,proto3" json:"data_set,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1309,7 +1309,7 @@ func (x *ControlStep) GetCondition() string {
 	return ""
 }
 
-func (x *ControlStep) GetBody() []*Step {
+func (x *ControlStep) GetBody() []*ScenarioStep {
 	if x != nil {
 		return x.Body
 	}
@@ -1564,14 +1564,14 @@ var File_scenario_proto protoreflect.FileDescriptor
 
 const file_scenario_proto_rawDesc = "" +
 	"\n" +
-	"\x0escenario.proto\x12\x15owaspchecker.scenario\x1a\x1fgoogle/protobuf/timestamp.proto\"V\n" +
+	"\x0escenario.proto\x12\x1dowaspattacksimulator.scenario\x1a\x1fgoogle/protobuf/timestamp.proto\"V\n" +
 	"\x17ValidateScenarioRequest\x12#\n" +
 	"\rscenario_data\x18\x01 \x01(\fR\fscenarioData\x12\x16\n" +
-	"\x06format\x18\x02 \x01(\tR\x06format\"\xb6\x01\n" +
+	"\x06format\x18\x02 \x01(\tR\x06format\"\xc6\x01\n" +
 	"\x18ValidateScenarioResponse\x12\x14\n" +
-	"\x05valid\x18\x01 \x01(\bR\x05valid\x12>\n" +
-	"\x06errors\x18\x02 \x03(\v2&.owaspchecker.scenario.ValidationErrorR\x06errors\x12D\n" +
-	"\bwarnings\x18\x03 \x03(\v2(.owaspchecker.scenario.ValidationWarningR\bwarnings\"m\n" +
+	"\x05valid\x18\x01 \x01(\bR\x05valid\x12F\n" +
+	"\x06errors\x18\x02 \x03(\v2..owaspattacksimulator.scenario.ValidationErrorR\x06errors\x12L\n" +
+	"\bwarnings\x18\x03 \x03(\v20.owaspattacksimulator.scenario.ValidationWarningR\bwarnings\"m\n" +
 	"\x0fValidationError\x12\x14\n" +
 	"\x05field\x18\x01 \x01(\tR\x05field\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x12\n" +
@@ -1584,21 +1584,21 @@ const file_scenario_proto_rawDesc = "" +
 	"\x06column\x18\x04 \x01(\x05R\x06column\"S\n" +
 	"\x14ParseScenarioRequest\x12#\n" +
 	"\rscenario_data\x18\x01 \x01(\fR\fscenarioData\x12\x16\n" +
-	"\x06format\x18\x02 \x01(\tR\x06format\"\x8f\x01\n" +
-	"\x15ParseScenarioResponse\x12;\n" +
-	"\bscenario\x18\x01 \x01(\v2\x1f.owaspchecker.scenario.ScenarioR\bscenario\x129\n" +
-	"\x06errors\x18\x02 \x03(\v2!.owaspchecker.scenario.ParseErrorR\x06errors\"R\n" +
+	"\x06format\x18\x02 \x01(\tR\x06format\"\x9f\x01\n" +
+	"\x15ParseScenarioResponse\x12C\n" +
+	"\bscenario\x18\x01 \x01(\v2'.owaspattacksimulator.scenario.ScenarioR\bscenario\x12A\n" +
+	"\x06errors\x18\x02 \x03(\v2).owaspattacksimulator.scenario.ParseErrorR\x06errors\"R\n" +
 	"\n" +
 	"ParseError\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x12\n" +
 	"\x04line\x18\x02 \x01(\x05R\x04line\x12\x16\n" +
-	"\x06column\x18\x03 \x01(\x05R\x06column\"\xce\x02\n" +
+	"\x06column\x18\x03 \x01(\x05R\x06column\"\xe6\x02\n" +
 	"\x16ExecuteScenarioRequest\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12;\n" +
-	"\bscenario\x18\x02 \x01(\v2\x1f.owaspchecker.scenario.ScenarioR\bscenario\x12Z\n" +
-	"\tvariables\x18\x03 \x03(\v2<.owaspchecker.scenario.ExecuteScenarioRequest.VariablesEntryR\tvariables\x12>\n" +
-	"\x06config\x18\x04 \x01(\v2&.owaspchecker.scenario.ExecutionConfigR\x06config\x1a<\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12C\n" +
+	"\bscenario\x18\x02 \x01(\v2'.owaspattacksimulator.scenario.ScenarioR\bscenario\x12b\n" +
+	"\tvariables\x18\x03 \x03(\v2D.owaspattacksimulator.scenario.ExecuteScenarioRequest.VariablesEntryR\tvariables\x12F\n" +
+	"\x06config\x18\x04 \x01(\v2..owaspattacksimulator.scenario.ExecutionConfigR\x06config\x1a<\n" +
 	"\x0eVariablesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc1\x01\n" +
@@ -1607,28 +1607,28 @@ const file_scenario_proto_rawDesc = "" +
 	"\x0ftimeout_seconds\x18\x02 \x01(\x05R\x0etimeoutSeconds\x12\x17\n" +
 	"\adry_run\x18\x03 \x01(\bR\x06dryRun\x12#\n" +
 	"\renabled_steps\x18\x04 \x03(\tR\fenabledSteps\x12%\n" +
-	"\x0edisabled_steps\x18\x05 \x03(\tR\rdisabledSteps\"\xa1\x03\n" +
+	"\x0edisabled_steps\x18\x05 \x03(\tR\rdisabledSteps\"\xc1\x03\n" +
 	"\bScenario\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\x12L\n" +
-	"\tvariables\x18\x04 \x03(\v2..owaspchecker.scenario.Scenario.VariablesEntryR\tvariables\x121\n" +
-	"\x05steps\x18\x05 \x03(\v2\x1b.owaspchecker.scenario.StepR\x05steps\x12I\n" +
-	"\bmetadata\x18\x06 \x03(\v2-.owaspchecker.scenario.Scenario.MetadataEntryR\bmetadata\x1a<\n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12T\n" +
+	"\tvariables\x18\x04 \x03(\v26.owaspattacksimulator.scenario.Scenario.VariablesEntryR\tvariables\x12A\n" +
+	"\x05steps\x18\x05 \x03(\v2+.owaspattacksimulator.scenario.ScenarioStepR\x05steps\x12Q\n" +
+	"\bmetadata\x18\x06 \x03(\v25.owaspattacksimulator.scenario.Scenario.MetadataEntryR\bmetadata\x1a<\n" +
 	"\x0eVariablesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9d\x06\n" +
-	"\x04Step\x12\x0e\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xf5\x06\n" +
+	"\fScenarioStep\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x04 \x01(\tR\vdescription\x12?\n" +
-	"\x06inputs\x18\x05 \x03(\v2'.owaspchecker.scenario.Step.InputsEntryR\x06inputs\x12?\n" +
-	"\x06guards\x18\x06 \x03(\v2'.owaspchecker.scenario.Step.GuardsEntryR\x06guards\x12B\n" +
-	"\aeffects\x18\a \x03(\v2(.owaspchecker.scenario.Step.EffectsEntryR\aeffects\x12'\n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12O\n" +
+	"\x06inputs\x18\x05 \x03(\v27.owaspattacksimulator.scenario.ScenarioStep.InputsEntryR\x06inputs\x12O\n" +
+	"\x06guards\x18\x06 \x03(\v27.owaspattacksimulator.scenario.ScenarioStep.GuardsEntryR\x06guards\x12R\n" +
+	"\aeffects\x18\a \x03(\v28.owaspattacksimulator.scenario.ScenarioStep.EffectsEntryR\aeffects\x12'\n" +
 	"\x0ftimeout_seconds\x18\b \x01(\x05R\x0etimeoutSeconds\x12\x1f\n" +
 	"\vretry_count\x18\t \x01(\x05R\n" +
 	"retryCount\x12\x1d\n" +
@@ -1636,9 +1636,9 @@ const file_scenario_proto_rawDesc = "" +
 	"on_success\x18\n" +
 	" \x03(\tR\tonSuccess\x12\x1d\n" +
 	"\n" +
-	"on_failure\x18\v \x03(\tR\tonFailure\x127\n" +
-	"\bchildren\x18\f \x03(\v2\x1b.owaspchecker.scenario.StepR\bchildren\x12E\n" +
-	"\bmetadata\x18\r \x03(\v2).owaspchecker.scenario.Step.MetadataEntryR\bmetadata\x1a9\n" +
+	"on_failure\x18\v \x03(\tR\tonFailure\x12G\n" +
+	"\bchildren\x18\f \x03(\v2+.owaspattacksimulator.scenario.ScenarioStepR\bchildren\x12U\n" +
+	"\bmetadata\x18\r \x03(\v29.owaspattacksimulator.scenario.ScenarioStep.MetadataEntryR\bmetadata\x1a9\n" +
 	"\vInputsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a9\n" +
@@ -1650,76 +1650,76 @@ const file_scenario_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x97\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9f\x02\n" +
 	"\vBrowserStep\x12\x16\n" +
 	"\x06action\x18\x01 \x01(\tR\x06action\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\x12\x1a\n" +
 	"\bselector\x18\x03 \x01(\tR\bselector\x12\x14\n" +
 	"\x05value\x18\x04 \x01(\tR\x05value\x12%\n" +
-	"\x0ewait_condition\x18\x05 \x01(\tR\rwaitCondition\x12I\n" +
-	"\aoptions\x18\x06 \x03(\v2/.owaspchecker.scenario.BrowserStep.OptionsEntryR\aoptions\x1a:\n" +
+	"\x0ewait_condition\x18\x05 \x01(\tR\rwaitCondition\x12Q\n" +
+	"\aoptions\x18\x06 \x03(\v27.owaspattacksimulator.scenario.BrowserStep.OptionsEntryR\aoptions\x1a:\n" +
 	"\fOptionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xce\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd6\x01\n" +
 	"\vSessionStep\x12\x16\n" +
 	"\x06action\x18\x01 \x01(\tR\x06action\x12\x16\n" +
 	"\x06source\x18\x02 \x01(\tR\x06source\x12\x14\n" +
-	"\x05items\x18\x03 \x03(\tR\x05items\x12@\n" +
-	"\x04data\x18\x04 \x03(\v2,.owaspchecker.scenario.SessionStep.DataEntryR\x04data\x1a7\n" +
+	"\x05items\x18\x03 \x03(\tR\x05items\x12H\n" +
+	"\x04data\x18\x04 \x03(\v24.owaspattacksimulator.scenario.SessionStep.DataEntryR\x04data\x1a7\n" +
 	"\tDataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8c\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa4\x03\n" +
 	"\vNetworkStep\x12\x16\n" +
 	"\x06action\x18\x01 \x01(\tR\x06action\x12\x16\n" +
 	"\x06method\x18\x02 \x01(\tR\x06method\x12\x10\n" +
-	"\x03url\x18\x03 \x01(\tR\x03url\x12I\n" +
-	"\aheaders\x18\x04 \x03(\v2/.owaspchecker.scenario.NetworkStep.HeadersEntryR\aheaders\x12\x12\n" +
+	"\x03url\x18\x03 \x01(\tR\x03url\x12Q\n" +
+	"\aheaders\x18\x04 \x03(\v27.owaspattacksimulator.scenario.NetworkStep.HeadersEntryR\aheaders\x12\x12\n" +
 	"\x04body\x18\x05 \x01(\fR\x04body\x12!\n" +
-	"\fcontent_type\x18\x06 \x01(\tR\vcontentType\x12A\n" +
-	"\bmutation\x18\a \x01(\v2%.owaspchecker.scenario.MutationConfigR\bmutation\x12:\n" +
-	"\x06checks\x18\b \x01(\v2\".owaspchecker.scenario.CheckConfigR\x06checks\x1a:\n" +
+	"\fcontent_type\x18\x06 \x01(\tR\vcontentType\x12I\n" +
+	"\bmutation\x18\a \x01(\v2-.owaspattacksimulator.scenario.MutationConfigR\bmutation\x12B\n" +
+	"\x06checks\x18\b \x01(\v2*.owaspattacksimulator.scenario.CheckConfigR\x06checks\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa0\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa8\x02\n" +
 	"\x0eMutationConfig\x12\x18\n" +
 	"\amethods\x18\x01 \x03(\tR\amethods\x12\x16\n" +
 	"\x06bodies\x18\x02 \x03(\tR\x06bodies\x12!\n" +
 	"\fpayload_sets\x18\x03 \x03(\tR\vpayloadSets\x12/\n" +
-	"\x14max_variants_per_req\x18\x04 \x01(\x05R\x11maxVariantsPerReq\x12L\n" +
-	"\aoptions\x18\x05 \x03(\v22.owaspchecker.scenario.MutationConfig.OptionsEntryR\aoptions\x1a:\n" +
+	"\x14max_variants_per_req\x18\x04 \x01(\x05R\x11maxVariantsPerReq\x12T\n" +
+	"\aoptions\x18\x05 \x03(\v2:.owaspattacksimulator.scenario.MutationConfig.OptionsEntryR\aoptions\x1a:\n" +
 	"\fOptionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc1\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd1\x02\n" +
 	"\vCheckConfig\x12\x18\n" +
-	"\aenabled\x18\x01 \x03(\tR\aenabled\x12R\n" +
+	"\aenabled\x18\x01 \x03(\tR\aenabled\x12Z\n" +
 	"\n" +
-	"thresholds\x18\x02 \x03(\v22.owaspchecker.scenario.CheckConfig.ThresholdsEntryR\n" +
-	"thresholds\x12I\n" +
-	"\aoptions\x18\x03 \x03(\v2/.owaspchecker.scenario.CheckConfig.OptionsEntryR\aoptions\x1a=\n" +
+	"thresholds\x18\x02 \x03(\v2:.owaspattacksimulator.scenario.CheckConfig.ThresholdsEntryR\n" +
+	"thresholds\x12Q\n" +
+	"\aoptions\x18\x03 \x03(\v27.owaspattacksimulator.scenario.CheckConfig.OptionsEntryR\aoptions\x1a=\n" +
 	"\x0fThresholdsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a:\n" +
 	"\fOptionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc3\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xcb\x01\n" +
 	"\tCrawlStep\x12\x16\n" +
 	"\x06action\x18\x01 \x01(\tR\x06action\x12\x19\n" +
-	"\bseed_url\x18\x02 \x01(\tR\aseedUrl\x12G\n" +
-	"\aoptions\x18\x03 \x03(\v2-.owaspchecker.scenario.CrawlStep.OptionsEntryR\aoptions\x1a:\n" +
+	"\bseed_url\x18\x02 \x01(\tR\aseedUrl\x12O\n" +
+	"\aoptions\x18\x03 \x03(\v25.owaspattacksimulator.scenario.CrawlStep.OptionsEntryR\aoptions\x1a:\n" +
 	"\fOptionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8b\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9b\x01\n" +
 	"\vControlStep\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x1c\n" +
-	"\tcondition\x18\x02 \x01(\tR\tcondition\x12/\n" +
-	"\x04body\x18\x03 \x03(\v2\x1b.owaspchecker.scenario.StepR\x04body\x12\x19\n" +
-	"\bdata_set\x18\x04 \x03(\tR\adataSet\"\xca\x01\n" +
+	"\tcondition\x18\x02 \x01(\tR\tcondition\x12?\n" +
+	"\x04body\x18\x03 \x03(\v2+.owaspattacksimulator.scenario.ScenarioStepR\x04body\x12\x19\n" +
+	"\bdata_set\x18\x04 \x03(\tR\adataSet\"\xd2\x01\n" +
 	"\n" +
 	"PluginStep\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
-	"\x06action\x18\x02 \x01(\tR\x06action\x12Q\n" +
+	"\x06action\x18\x02 \x01(\tR\x06action\x12Y\n" +
 	"\n" +
-	"parameters\x18\x03 \x03(\v21.owaspchecker.scenario.PluginStep.ParametersEntryR\n" +
+	"parameters\x18\x03 \x03(\v29.owaspattacksimulator.scenario.PluginStep.ParametersEntryR\n" +
 	"parameters\x1a=\n" +
 	"\x0fParametersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
@@ -1733,22 +1733,22 @@ const file_scenario_proto_rawDesc = "" +
 	"\astep_id\x18\x04 \x01(\tR\x06stepId\x12\x12\n" +
 	"\x04kind\x18\x05 \x01(\tR\x04kind\x12\x18\n" +
 	"\apayload\x18\x06 \x01(\fR\apayload\x128\n" +
-	"\ttimestamp\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\xf2\x02\n" +
+	"\ttimestamp\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\xfa\x02\n" +
 	"\x12StepExecutionEvent\x12\x17\n" +
 	"\astep_id\x18\x01 \x01(\tR\x06stepId\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12#\n" +
-	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage\x12P\n" +
-	"\aresults\x18\x04 \x03(\v26.owaspchecker.scenario.StepExecutionEvent.ResultsEntryR\aresults\x129\n" +
+	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage\x12X\n" +
+	"\aresults\x18\x04 \x03(\v2>.owaspattacksimulator.scenario.StepExecutionEvent.ResultsEntryR\aresults\x129\n" +
 	"\n" +
 	"started_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x12=\n" +
 	"\fcompleted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\x1a:\n" +
 	"\fResultsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\xdc\x02\n" +
-	"\x0fScenarioService\x12s\n" +
-	"\x10ValidateScenario\x12..owaspchecker.scenario.ValidateScenarioRequest\x1a/.owaspchecker.scenario.ValidateScenarioResponse\x12j\n" +
-	"\rParseScenario\x12+.owaspchecker.scenario.ParseScenarioRequest\x1a,.owaspchecker.scenario.ParseScenarioResponse\x12h\n" +
-	"\x0fExecuteScenario\x12-.owaspchecker.scenario.ExecuteScenarioRequest\x1a$.owaspchecker.scenario.ScenarioEvent0\x01B)Z'github.com/owaspchecker/api/proto;protob\x06proto3"
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\x8d\x03\n" +
+	"\x0fScenarioService\x12\x83\x01\n" +
+	"\x10ValidateScenario\x126.owaspattacksimulator.scenario.ValidateScenarioRequest\x1a7.owaspattacksimulator.scenario.ValidateScenarioResponse\x12z\n" +
+	"\rParseScenario\x123.owaspattacksimulator.scenario.ParseScenarioRequest\x1a4.owaspattacksimulator.scenario.ParseScenarioResponse\x12x\n" +
+	"\x0fExecuteScenario\x125.owaspattacksimulator.scenario.ExecuteScenarioRequest\x1a,.owaspattacksimulator.scenario.ScenarioEvent0\x01B1Z/github.com/owaspattacksimulator/api/proto;protob\x06proto3"
 
 var (
 	file_scenario_proto_rawDescOnce sync.Once
@@ -1764,82 +1764,82 @@ func file_scenario_proto_rawDescGZIP() []byte {
 
 var file_scenario_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_scenario_proto_goTypes = []any{
-	(*ValidateScenarioRequest)(nil),  // 0: owaspchecker.scenario.ValidateScenarioRequest
-	(*ValidateScenarioResponse)(nil), // 1: owaspchecker.scenario.ValidateScenarioResponse
-	(*ValidationError)(nil),          // 2: owaspchecker.scenario.ValidationError
-	(*ValidationWarning)(nil),        // 3: owaspchecker.scenario.ValidationWarning
-	(*ParseScenarioRequest)(nil),     // 4: owaspchecker.scenario.ParseScenarioRequest
-	(*ParseScenarioResponse)(nil),    // 5: owaspchecker.scenario.ParseScenarioResponse
-	(*ParseError)(nil),               // 6: owaspchecker.scenario.ParseError
-	(*ExecuteScenarioRequest)(nil),   // 7: owaspchecker.scenario.ExecuteScenarioRequest
-	(*ExecutionConfig)(nil),          // 8: owaspchecker.scenario.ExecutionConfig
-	(*Scenario)(nil),                 // 9: owaspchecker.scenario.Scenario
-	(*Step)(nil),                     // 10: owaspchecker.scenario.Step
-	(*BrowserStep)(nil),              // 11: owaspchecker.scenario.BrowserStep
-	(*SessionStep)(nil),              // 12: owaspchecker.scenario.SessionStep
-	(*NetworkStep)(nil),              // 13: owaspchecker.scenario.NetworkStep
-	(*MutationConfig)(nil),           // 14: owaspchecker.scenario.MutationConfig
-	(*CheckConfig)(nil),              // 15: owaspchecker.scenario.CheckConfig
-	(*CrawlStep)(nil),                // 16: owaspchecker.scenario.CrawlStep
-	(*ControlStep)(nil),              // 17: owaspchecker.scenario.ControlStep
-	(*PluginStep)(nil),               // 18: owaspchecker.scenario.PluginStep
-	(*ScenarioEvent)(nil),            // 19: owaspchecker.scenario.ScenarioEvent
-	(*StepExecutionEvent)(nil),       // 20: owaspchecker.scenario.StepExecutionEvent
-	nil,                              // 21: owaspchecker.scenario.ExecuteScenarioRequest.VariablesEntry
-	nil,                              // 22: owaspchecker.scenario.Scenario.VariablesEntry
-	nil,                              // 23: owaspchecker.scenario.Scenario.MetadataEntry
-	nil,                              // 24: owaspchecker.scenario.Step.InputsEntry
-	nil,                              // 25: owaspchecker.scenario.Step.GuardsEntry
-	nil,                              // 26: owaspchecker.scenario.Step.EffectsEntry
-	nil,                              // 27: owaspchecker.scenario.Step.MetadataEntry
-	nil,                              // 28: owaspchecker.scenario.BrowserStep.OptionsEntry
-	nil,                              // 29: owaspchecker.scenario.SessionStep.DataEntry
-	nil,                              // 30: owaspchecker.scenario.NetworkStep.HeadersEntry
-	nil,                              // 31: owaspchecker.scenario.MutationConfig.OptionsEntry
-	nil,                              // 32: owaspchecker.scenario.CheckConfig.ThresholdsEntry
-	nil,                              // 33: owaspchecker.scenario.CheckConfig.OptionsEntry
-	nil,                              // 34: owaspchecker.scenario.CrawlStep.OptionsEntry
-	nil,                              // 35: owaspchecker.scenario.PluginStep.ParametersEntry
-	nil,                              // 36: owaspchecker.scenario.StepExecutionEvent.ResultsEntry
+	(*ValidateScenarioRequest)(nil),  // 0: owaspattacksimulator.scenario.ValidateScenarioRequest
+	(*ValidateScenarioResponse)(nil), // 1: owaspattacksimulator.scenario.ValidateScenarioResponse
+	(*ValidationError)(nil),          // 2: owaspattacksimulator.scenario.ValidationError
+	(*ValidationWarning)(nil),        // 3: owaspattacksimulator.scenario.ValidationWarning
+	(*ParseScenarioRequest)(nil),     // 4: owaspattacksimulator.scenario.ParseScenarioRequest
+	(*ParseScenarioResponse)(nil),    // 5: owaspattacksimulator.scenario.ParseScenarioResponse
+	(*ParseError)(nil),               // 6: owaspattacksimulator.scenario.ParseError
+	(*ExecuteScenarioRequest)(nil),   // 7: owaspattacksimulator.scenario.ExecuteScenarioRequest
+	(*ExecutionConfig)(nil),          // 8: owaspattacksimulator.scenario.ExecutionConfig
+	(*Scenario)(nil),                 // 9: owaspattacksimulator.scenario.Scenario
+	(*ScenarioStep)(nil),             // 10: owaspattacksimulator.scenario.ScenarioStep
+	(*BrowserStep)(nil),              // 11: owaspattacksimulator.scenario.BrowserStep
+	(*SessionStep)(nil),              // 12: owaspattacksimulator.scenario.SessionStep
+	(*NetworkStep)(nil),              // 13: owaspattacksimulator.scenario.NetworkStep
+	(*MutationConfig)(nil),           // 14: owaspattacksimulator.scenario.MutationConfig
+	(*CheckConfig)(nil),              // 15: owaspattacksimulator.scenario.CheckConfig
+	(*CrawlStep)(nil),                // 16: owaspattacksimulator.scenario.CrawlStep
+	(*ControlStep)(nil),              // 17: owaspattacksimulator.scenario.ControlStep
+	(*PluginStep)(nil),               // 18: owaspattacksimulator.scenario.PluginStep
+	(*ScenarioEvent)(nil),            // 19: owaspattacksimulator.scenario.ScenarioEvent
+	(*StepExecutionEvent)(nil),       // 20: owaspattacksimulator.scenario.StepExecutionEvent
+	nil,                              // 21: owaspattacksimulator.scenario.ExecuteScenarioRequest.VariablesEntry
+	nil,                              // 22: owaspattacksimulator.scenario.Scenario.VariablesEntry
+	nil,                              // 23: owaspattacksimulator.scenario.Scenario.MetadataEntry
+	nil,                              // 24: owaspattacksimulator.scenario.ScenarioStep.InputsEntry
+	nil,                              // 25: owaspattacksimulator.scenario.ScenarioStep.GuardsEntry
+	nil,                              // 26: owaspattacksimulator.scenario.ScenarioStep.EffectsEntry
+	nil,                              // 27: owaspattacksimulator.scenario.ScenarioStep.MetadataEntry
+	nil,                              // 28: owaspattacksimulator.scenario.BrowserStep.OptionsEntry
+	nil,                              // 29: owaspattacksimulator.scenario.SessionStep.DataEntry
+	nil,                              // 30: owaspattacksimulator.scenario.NetworkStep.HeadersEntry
+	nil,                              // 31: owaspattacksimulator.scenario.MutationConfig.OptionsEntry
+	nil,                              // 32: owaspattacksimulator.scenario.CheckConfig.ThresholdsEntry
+	nil,                              // 33: owaspattacksimulator.scenario.CheckConfig.OptionsEntry
+	nil,                              // 34: owaspattacksimulator.scenario.CrawlStep.OptionsEntry
+	nil,                              // 35: owaspattacksimulator.scenario.PluginStep.ParametersEntry
+	nil,                              // 36: owaspattacksimulator.scenario.StepExecutionEvent.ResultsEntry
 	(*timestamppb.Timestamp)(nil),    // 37: google.protobuf.Timestamp
 }
 var file_scenario_proto_depIdxs = []int32{
-	2,  // 0: owaspchecker.scenario.ValidateScenarioResponse.errors:type_name -> owaspchecker.scenario.ValidationError
-	3,  // 1: owaspchecker.scenario.ValidateScenarioResponse.warnings:type_name -> owaspchecker.scenario.ValidationWarning
-	9,  // 2: owaspchecker.scenario.ParseScenarioResponse.scenario:type_name -> owaspchecker.scenario.Scenario
-	6,  // 3: owaspchecker.scenario.ParseScenarioResponse.errors:type_name -> owaspchecker.scenario.ParseError
-	9,  // 4: owaspchecker.scenario.ExecuteScenarioRequest.scenario:type_name -> owaspchecker.scenario.Scenario
-	21, // 5: owaspchecker.scenario.ExecuteScenarioRequest.variables:type_name -> owaspchecker.scenario.ExecuteScenarioRequest.VariablesEntry
-	8,  // 6: owaspchecker.scenario.ExecuteScenarioRequest.config:type_name -> owaspchecker.scenario.ExecutionConfig
-	22, // 7: owaspchecker.scenario.Scenario.variables:type_name -> owaspchecker.scenario.Scenario.VariablesEntry
-	10, // 8: owaspchecker.scenario.Scenario.steps:type_name -> owaspchecker.scenario.Step
-	23, // 9: owaspchecker.scenario.Scenario.metadata:type_name -> owaspchecker.scenario.Scenario.MetadataEntry
-	24, // 10: owaspchecker.scenario.Step.inputs:type_name -> owaspchecker.scenario.Step.InputsEntry
-	25, // 11: owaspchecker.scenario.Step.guards:type_name -> owaspchecker.scenario.Step.GuardsEntry
-	26, // 12: owaspchecker.scenario.Step.effects:type_name -> owaspchecker.scenario.Step.EffectsEntry
-	10, // 13: owaspchecker.scenario.Step.children:type_name -> owaspchecker.scenario.Step
-	27, // 14: owaspchecker.scenario.Step.metadata:type_name -> owaspchecker.scenario.Step.MetadataEntry
-	28, // 15: owaspchecker.scenario.BrowserStep.options:type_name -> owaspchecker.scenario.BrowserStep.OptionsEntry
-	29, // 16: owaspchecker.scenario.SessionStep.data:type_name -> owaspchecker.scenario.SessionStep.DataEntry
-	30, // 17: owaspchecker.scenario.NetworkStep.headers:type_name -> owaspchecker.scenario.NetworkStep.HeadersEntry
-	14, // 18: owaspchecker.scenario.NetworkStep.mutation:type_name -> owaspchecker.scenario.MutationConfig
-	15, // 19: owaspchecker.scenario.NetworkStep.checks:type_name -> owaspchecker.scenario.CheckConfig
-	31, // 20: owaspchecker.scenario.MutationConfig.options:type_name -> owaspchecker.scenario.MutationConfig.OptionsEntry
-	32, // 21: owaspchecker.scenario.CheckConfig.thresholds:type_name -> owaspchecker.scenario.CheckConfig.ThresholdsEntry
-	33, // 22: owaspchecker.scenario.CheckConfig.options:type_name -> owaspchecker.scenario.CheckConfig.OptionsEntry
-	34, // 23: owaspchecker.scenario.CrawlStep.options:type_name -> owaspchecker.scenario.CrawlStep.OptionsEntry
-	10, // 24: owaspchecker.scenario.ControlStep.body:type_name -> owaspchecker.scenario.Step
-	35, // 25: owaspchecker.scenario.PluginStep.parameters:type_name -> owaspchecker.scenario.PluginStep.ParametersEntry
-	37, // 26: owaspchecker.scenario.ScenarioEvent.timestamp:type_name -> google.protobuf.Timestamp
-	36, // 27: owaspchecker.scenario.StepExecutionEvent.results:type_name -> owaspchecker.scenario.StepExecutionEvent.ResultsEntry
-	37, // 28: owaspchecker.scenario.StepExecutionEvent.started_at:type_name -> google.protobuf.Timestamp
-	37, // 29: owaspchecker.scenario.StepExecutionEvent.completed_at:type_name -> google.protobuf.Timestamp
-	0,  // 30: owaspchecker.scenario.ScenarioService.ValidateScenario:input_type -> owaspchecker.scenario.ValidateScenarioRequest
-	4,  // 31: owaspchecker.scenario.ScenarioService.ParseScenario:input_type -> owaspchecker.scenario.ParseScenarioRequest
-	7,  // 32: owaspchecker.scenario.ScenarioService.ExecuteScenario:input_type -> owaspchecker.scenario.ExecuteScenarioRequest
-	1,  // 33: owaspchecker.scenario.ScenarioService.ValidateScenario:output_type -> owaspchecker.scenario.ValidateScenarioResponse
-	5,  // 34: owaspchecker.scenario.ScenarioService.ParseScenario:output_type -> owaspchecker.scenario.ParseScenarioResponse
-	19, // 35: owaspchecker.scenario.ScenarioService.ExecuteScenario:output_type -> owaspchecker.scenario.ScenarioEvent
+	2,  // 0: owaspattacksimulator.scenario.ValidateScenarioResponse.errors:type_name -> owaspattacksimulator.scenario.ValidationError
+	3,  // 1: owaspattacksimulator.scenario.ValidateScenarioResponse.warnings:type_name -> owaspattacksimulator.scenario.ValidationWarning
+	9,  // 2: owaspattacksimulator.scenario.ParseScenarioResponse.scenario:type_name -> owaspattacksimulator.scenario.Scenario
+	6,  // 3: owaspattacksimulator.scenario.ParseScenarioResponse.errors:type_name -> owaspattacksimulator.scenario.ParseError
+	9,  // 4: owaspattacksimulator.scenario.ExecuteScenarioRequest.scenario:type_name -> owaspattacksimulator.scenario.Scenario
+	21, // 5: owaspattacksimulator.scenario.ExecuteScenarioRequest.variables:type_name -> owaspattacksimulator.scenario.ExecuteScenarioRequest.VariablesEntry
+	8,  // 6: owaspattacksimulator.scenario.ExecuteScenarioRequest.config:type_name -> owaspattacksimulator.scenario.ExecutionConfig
+	22, // 7: owaspattacksimulator.scenario.Scenario.variables:type_name -> owaspattacksimulator.scenario.Scenario.VariablesEntry
+	10, // 8: owaspattacksimulator.scenario.Scenario.steps:type_name -> owaspattacksimulator.scenario.ScenarioStep
+	23, // 9: owaspattacksimulator.scenario.Scenario.metadata:type_name -> owaspattacksimulator.scenario.Scenario.MetadataEntry
+	24, // 10: owaspattacksimulator.scenario.ScenarioStep.inputs:type_name -> owaspattacksimulator.scenario.ScenarioStep.InputsEntry
+	25, // 11: owaspattacksimulator.scenario.ScenarioStep.guards:type_name -> owaspattacksimulator.scenario.ScenarioStep.GuardsEntry
+	26, // 12: owaspattacksimulator.scenario.ScenarioStep.effects:type_name -> owaspattacksimulator.scenario.ScenarioStep.EffectsEntry
+	10, // 13: owaspattacksimulator.scenario.ScenarioStep.children:type_name -> owaspattacksimulator.scenario.ScenarioStep
+	27, // 14: owaspattacksimulator.scenario.ScenarioStep.metadata:type_name -> owaspattacksimulator.scenario.ScenarioStep.MetadataEntry
+	28, // 15: owaspattacksimulator.scenario.BrowserStep.options:type_name -> owaspattacksimulator.scenario.BrowserStep.OptionsEntry
+	29, // 16: owaspattacksimulator.scenario.SessionStep.data:type_name -> owaspattacksimulator.scenario.SessionStep.DataEntry
+	30, // 17: owaspattacksimulator.scenario.NetworkStep.headers:type_name -> owaspattacksimulator.scenario.NetworkStep.HeadersEntry
+	14, // 18: owaspattacksimulator.scenario.NetworkStep.mutation:type_name -> owaspattacksimulator.scenario.MutationConfig
+	15, // 19: owaspattacksimulator.scenario.NetworkStep.checks:type_name -> owaspattacksimulator.scenario.CheckConfig
+	31, // 20: owaspattacksimulator.scenario.MutationConfig.options:type_name -> owaspattacksimulator.scenario.MutationConfig.OptionsEntry
+	32, // 21: owaspattacksimulator.scenario.CheckConfig.thresholds:type_name -> owaspattacksimulator.scenario.CheckConfig.ThresholdsEntry
+	33, // 22: owaspattacksimulator.scenario.CheckConfig.options:type_name -> owaspattacksimulator.scenario.CheckConfig.OptionsEntry
+	34, // 23: owaspattacksimulator.scenario.CrawlStep.options:type_name -> owaspattacksimulator.scenario.CrawlStep.OptionsEntry
+	10, // 24: owaspattacksimulator.scenario.ControlStep.body:type_name -> owaspattacksimulator.scenario.ScenarioStep
+	35, // 25: owaspattacksimulator.scenario.PluginStep.parameters:type_name -> owaspattacksimulator.scenario.PluginStep.ParametersEntry
+	37, // 26: owaspattacksimulator.scenario.ScenarioEvent.timestamp:type_name -> google.protobuf.Timestamp
+	36, // 27: owaspattacksimulator.scenario.StepExecutionEvent.results:type_name -> owaspattacksimulator.scenario.StepExecutionEvent.ResultsEntry
+	37, // 28: owaspattacksimulator.scenario.StepExecutionEvent.started_at:type_name -> google.protobuf.Timestamp
+	37, // 29: owaspattacksimulator.scenario.StepExecutionEvent.completed_at:type_name -> google.protobuf.Timestamp
+	0,  // 30: owaspattacksimulator.scenario.ScenarioService.ValidateScenario:input_type -> owaspattacksimulator.scenario.ValidateScenarioRequest
+	4,  // 31: owaspattacksimulator.scenario.ScenarioService.ParseScenario:input_type -> owaspattacksimulator.scenario.ParseScenarioRequest
+	7,  // 32: owaspattacksimulator.scenario.ScenarioService.ExecuteScenario:input_type -> owaspattacksimulator.scenario.ExecuteScenarioRequest
+	1,  // 33: owaspattacksimulator.scenario.ScenarioService.ValidateScenario:output_type -> owaspattacksimulator.scenario.ValidateScenarioResponse
+	5,  // 34: owaspattacksimulator.scenario.ScenarioService.ParseScenario:output_type -> owaspattacksimulator.scenario.ParseScenarioResponse
+	19, // 35: owaspattacksimulator.scenario.ScenarioService.ExecuteScenario:output_type -> owaspattacksimulator.scenario.ScenarioEvent
 	33, // [33:36] is the sub-list for method output_type
 	30, // [30:33] is the sub-list for method input_type
 	30, // [30:30] is the sub-list for extension type_name

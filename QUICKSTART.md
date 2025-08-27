@@ -12,7 +12,7 @@
 
 ```bash
 # 1. Clone and build
-git clone https://github.com/owaspchecker/owaspchecker.git
+git clone https://github.com/owaspattacksimulator/owaspchecker.git
 cd owaspchecker
 go build -o apps/cli/simulation ./apps/cli
 
@@ -27,7 +27,7 @@ go build -o apps/cli/simulation ./apps/cli
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/owaspchecker/owaspchecker.git
+git clone https://github.com/owaspattacksimulator/owaspchecker.git
 cd owaspchecker
 
 # 2. Install dependencies
@@ -47,7 +47,7 @@ make -f scripts/Makefile dev
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/owaspchecker/owaspchecker.git
+git clone https://github.com/owaspattacksimulator/owaspchecker.git
 cd owaspchecker
 
 # 2. Start with Docker Compose
@@ -111,9 +111,9 @@ simulation db vacuum
 ### Environment Variables
 
 ```bash
-export OWASPCHECKER_CONFIG=/path/to/config.yaml
-export OWASPCHECKER_DB_PATH=/path/to/database.db
-export OWASPCHECKER_LOG_LEVEL=debug
+export SIMULATION_CONFIG=/path/to/config.yaml
+export SIMULATION_DB_PATH=/path/to/database.db
+export SIMULATION_LOG_LEVEL=debug
 ```
 
 ### Configuration File
@@ -208,8 +208,8 @@ steps:
 ### Getting Help
 
 - **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/owaspchecker/owaspchecker/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/owaspchecker/owaspchecker/discussions)
+- **Issues**: [GitHub Issues](https://github.com/owaspattacksimulator/owaspchecker/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/owaspattacksimulator/owaspchecker/discussions)
 
 ## 🔒 Security Notice
 

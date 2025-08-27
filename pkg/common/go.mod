@@ -1,4 +1,4 @@
-module github.com/owaspchecker/pkg/common
+module github.com/owaspattacksimulator/pkg/common
 
 go 1.23
 

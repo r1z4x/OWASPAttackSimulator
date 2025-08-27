@@ -1,9 +1,9 @@
-module github.com/owaspchecker/pkg/checks
+module github.com/owaspattacksimulator/pkg/checks
 
 go 1.23
 
 require (
-	github.com/owaspchecker/pkg/common v0.0.0
+	github.com/owaspattacksimulator/pkg/common v0.0.0
 )
 
-replace github.com/owaspchecker/pkg/common => ../common
+replace github.com/owaspattacksimulator/pkg/common => ../common

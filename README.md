@@ -29,7 +29,7 @@ A comprehensive scenario-based security testing framework with infinite-step att
 ### From Source
 
 ```bash
-git clone https://github.com/owaspchecker/owaspchecker.git
+git clone https://github.com/owaspattacksimulator/owaspchecker.git
 cd owaspchecker
 make install-deps
 make build
@@ -143,9 +143,9 @@ checks:
 ### Environment Variables
 
 ```bash
-export OWASPCHECKER_CONFIG=/path/to/config.yaml
-export OWASPCHECKER_DB_PATH=/path/to/database.db
-export OWASPCHECKER_LOG_LEVEL=debug
+export SIMULATION_CONFIG=/path/to/config.yaml
+export SIMULATION_DB_PATH=/path/to/database.db
+export SIMULATION_LOG_LEVEL=debug
 ```
 
 ## Architecture
@@ -226,8 +226,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Support
 
 - **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/owaspchecker/owaspchecker/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/owaspchecker/owaspchecker/discussions)
+- **Issues**: [GitHub Issues](https://github.com/owaspattacksimulator/owaspchecker/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/owaspattacksimulator/owaspchecker/discussions)
 - **Security**: [Security Policy](SECURITY.md)
 
 ---

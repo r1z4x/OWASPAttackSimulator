@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# OWASPChecker Protobuf Tools Installation Script
+# OWASPAttackSimulator Protobuf Tools Installation Script
 
 set -e
 
-echo "Installing protobuf tools for OWASPChecker..."
+echo "Installing protobuf tools for OWASPAttackSimulator..."
 
 # Detect OS
 OS=$(uname -s)

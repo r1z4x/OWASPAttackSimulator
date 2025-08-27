@@ -55,7 +55,7 @@
 ```bash
 # Quick start
 git clone <repo>
-cd owaspchecker
+cd OWASPAttackSimulator
 go build -o apps/cli/simulation ./apps/cli
 ./apps/cli/simulation --help
 

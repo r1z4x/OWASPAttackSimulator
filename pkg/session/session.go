@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/owaspchecker/pkg/httpx"
+	"github.com/owaspattacksimulator/pkg/httpx"
 )
 
 // Session represents a browser session
@@ -47,7 +47,7 @@ func (sm *SessionManager) NewSession(target string, timeout time.Duration) (*Ses
 
 	// Create HTTP client with cookie jar
 	client := httpx.NewClient(timeout)
-	
+
 	// Create session
 	session := &Session{
 		ID:        generateSessionID(),
@@ -86,11 +86,11 @@ func (sm *SessionManager) GetSession(id string) (*Session, bool) {
 func (sm *SessionManager) CloseSession(id string) error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
-	
+
 	if _, exists := sm.sessions[id]; !exists {
 		return fmt.Errorf("session not found: %s", id)
 	}
-	
+
 	delete(sm.sessions, id)
 	return nil
 }
@@ -99,7 +99,7 @@ func (sm *SessionManager) CloseSession(id string) error {
 func (sm *SessionManager) ListSessions() []*Session {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
-	
+
 	sessions := make([]*Session, 0, len(sm.sessions))
 	for _, session := range sm.sessions {
 		sessions = append(sessions, session)

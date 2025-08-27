@@ -1,7 +1,7 @@
 {
-  "name": "owaspchecker-gui-runner",
+  "name": "owaspattacksimulator-gui-runner",
   "version": "1.0.0",
-  "description": "OWASPChecker GUI Runner with Playwright",
+  "description": "OWASPAttackSimulator GUI Runner with Playwright",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -22,7 +22,7 @@
     "playwright",
     "automation"
   ],
-  "author": "OWASPChecker Team",
+  "author": "OWASPAttackSimulator Team",
   "license": "MIT",
   "dependencies": {
     "@grpc/grpc-js": "^1.9.0",

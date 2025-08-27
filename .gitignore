@@ -31,6 +31,14 @@ simulation.exe
 
 # Report files
 simulation_report.*
+reports/*
+
+# Scenario files
+configs/scenarios/*
+
+# Node modules
+apps/gui-runner/node_modules*
+node_modules/*
 
 # IDE files
 .vscode/

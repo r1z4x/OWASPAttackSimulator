@@ -7,7 +7,7 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/owaspchecker/internal/common"
+	"github.com/owaspattacksimulator/internal/common"
 )
 
 // SQLiteStore implements storage using SQLite

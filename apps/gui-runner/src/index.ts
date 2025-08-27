@@ -21,7 +21,7 @@ let browser: Browser | null = null;
 let page: Page | null = null;
 
 // Start the GUI server
-console.log('🚀 Starting OWASPChecker GUI Runner...');
+console.log('🚀 Starting OWASPAttackSimulator GUI Runner...');
 
 // Initialize browser on startup
 async function initializeBrowser() {
@@ -116,7 +116,7 @@ const server = http.createServer((req: any, res: any) => {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>OWASPChecker - Attack Dashboard</title>
+    <title>OWASPAttackSimulator - Attack Dashboard</title>
     <meta charset="utf-8">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -171,7 +171,7 @@ const server = http.createServer((req: any, res: any) => {
                     </svg>
         </div>
                 <div>
-                    <h1 class="text-3xl font-bold">OWASPChecker</h1>
+                    <h1 class="text-3xl font-bold">OWASPAttackSimulator</h1>
                     <p class="text-blue-100">Real-time security testing dashboard</p>
             </div>
             </div>
@@ -651,8 +651,8 @@ const server = http.createServer((req: any, res: any) => {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ 
             success: true, 
-          debugUrl: 'http://owaspchecker-gui:9222',
-            message: 'Browser already running'
+                    debugUrl: 'http://simulation-gui:9222',
+          message: 'Browser already running'
           }));
           return;
         }
@@ -694,7 +694,7 @@ const server = http.createServer((req: any, res: any) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ 
           success: true, 
-          debugUrl: 'http://owaspchecker-gui:9222',
+          debugUrl: 'http://simulation-gui:9222',
           message: 'Browser started with remote debugging'
         }));
       } catch (error) {

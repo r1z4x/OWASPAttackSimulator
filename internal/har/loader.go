@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/owaspchecker/internal/common"
+	"github.com/owaspattacksimulator/internal/common"
 )
 
 // HAR represents the HAR file structure

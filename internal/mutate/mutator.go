@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/owaspchecker/internal/common"
+	"github.com/owaspattacksimulator/internal/common"
 )
 
 // Mutator handles request mutation for security testing
@@ -566,7 +566,7 @@ func (m *Mutator) mutateURL(req *common.RecordedRequest) []common.RecordedReques
 		for _, payload := range payloads {
 			// Create path-based mutations
 			mutatedURL := *parsedURL
-			
+
 			// Add payload as a new path segment
 			if parsedURL.Path == "/" {
 				mutatedURL.Path = "/" + payload.Value
@@ -585,7 +585,7 @@ func (m *Mutator) mutateURL(req *common.RecordedRequest) []common.RecordedReques
 
 	// URL Query parameter mutations
 	query := parsedURL.Query()
-	
+
 	// If no query parameters exist, create some common ones to inject into
 	if len(query) == 0 {
 		commonParams := []string{"id", "user", "search", "q", "param", "value", "data"}
@@ -661,4 +661,21 @@ func copyJSONMap(original map[string]interface{}) map[string]interface{} {
 // generateID generates a unique ID
 func generateID() string {
 	return uuid.New().String()
+}
+
+// GetAllPayloads returns all payloads organized by attack type
+func (m *Mutator) GetAllPayloads() map[string][]common.Payload {
+	result := make(map[string][]common.Payload)
+	for attackType, payloads := range m.payloads {
+		result[string(attackType)] = payloads
+	}
+	return result
+}
+
+// GetPayloadsForType returns payloads for a specific attack type
+func (m *Mutator) GetPayloadsForType(attackType common.AttackType) []common.Payload {
+	if payloads, exists := m.payloads[attackType]; exists {
+		return payloads
+	}
+	return []common.Payload{}
 }

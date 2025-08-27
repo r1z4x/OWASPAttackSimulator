@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/owaspchecker/internal/common"
+	"github.com/owaspattacksimulator/internal/common"
 )
 
 // Checker handles vulnerability detection

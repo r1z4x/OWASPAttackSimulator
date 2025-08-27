@@ -9,8 +9,8 @@ import (
 
 	"github.com/gocolly/colly/v2"
 	"github.com/google/uuid"
-	"github.com/owaspchecker/internal/common"
-	"github.com/owaspchecker/internal/httpx"
+	"github.com/owaspattacksimulator/internal/common"
+	"github.com/owaspattacksimulator/internal/httpx"
 )
 
 // Crawler handles web crawling operations

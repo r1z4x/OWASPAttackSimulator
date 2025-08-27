@@ -9,7 +9,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/owaspchecker/internal/common"
+	"github.com/owaspattacksimulator/internal/common"
 )
 
 // Reporter handles report generation
@@ -46,7 +46,7 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OWASPChecker Security Report</title>
+    <title>OWASPAttackSimulator Security Report</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -69,7 +69,7 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
         <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900 mb-2">OWASPChecker Security Report</h1>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">OWASPAttackSimulator Security Report</h1>
                     <p class="text-gray-600">OWASP Top 10 Vulnerability Scanner</p>
                 </div>
                 <div class="text-right">
@@ -767,7 +767,7 @@ func (r *Reporter) createRequestDataFromFinding(finding common.Finding) string {
 	// Build raw HTTP request
 	requestData.WriteString(fmt.Sprintf("%s %s HTTP/1.1\n", finding.Method, finding.URL))
 	requestData.WriteString("Host: " + extractHost(finding.URL) + "\n")
-	requestData.WriteString("User-Agent: OWASPChecker/1.0\n")
+	requestData.WriteString("User-Agent: /1.0\n")
 	requestData.WriteString("Accept: */*\n")
 	requestData.WriteString("Accept-Language: en-US,en;q=0.9\n")
 	requestData.WriteString("Accept-Encoding: gzip, deflate\n")
