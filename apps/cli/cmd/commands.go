@@ -13,9 +13,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/owaspattacksimulator/internal/attack"
 	"github.com/owaspattacksimulator/internal/common"
 	"github.com/owaspattacksimulator/internal/report"
-	"github.com/owaspattacksimulator/pkg/engine"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -53,7 +53,7 @@ func AddAttackCommand(rootCmd *cobra.Command) {
 			}
 
 			// Create attack engine with enhanced UI
-			attackEngine := engine.NewEngine(workers, timeout)
+			attackEngine := attack.NewEngine(workers, timeout)
 
 			// Set debug mode if enabled
 			if debug {
@@ -62,7 +62,7 @@ func AddAttackCommand(rootCmd *cobra.Command) {
 			}
 
 			// Prepare attack configuration
-			config := &engine.AttackConfig{
+			config := &attack.AttackConfig{
 				Target:      target,
 				Method:      method,
 				PayloadSets: []string{payloadSet},
@@ -118,7 +118,7 @@ func AddAttackCommand(rootCmd *cobra.Command) {
 }
 
 // convertAttackResultToFindings converts attack result to findings format
-func convertAttackResultToFindings(result *engine.AttackResult, target string) []common.Finding {
+func convertAttackResultToFindings(result *attack.AttackResult, target string) []common.Finding {
 	// Debug: Print findings count
 	fmt.Printf("🔍 Converting attack result to findings...\n")
 	fmt.Printf("📊 Total findings found: %d\n", len(result.Findings))
@@ -147,7 +147,7 @@ func AddScenarioCommand(rootCmd *cobra.Command) {
 			}
 
 			// Create enhanced UI for scenario
-			ui := engine.NewUI(true, true, false)
+			ui := attack.NewUI(true, true, false)
 
 			ui.PrintBanner()
 			ui.PrintInfo(fmt.Sprintf("🎬 Running scenario: %s", file))
@@ -557,7 +557,7 @@ func sendScenarioCompletionToGUI(scenarioName string, totalRequests int, totalFi
 }
 
 // executeStepWithRetry executes a step with retry mechanism
-func executeStepWithRetry(ctx context.Context, step ScenarioStep, stepIndex int, totalSteps int, attackEngine *engine.Engine, scenario *Scenario, totalRequests *int, totalFindings *int, delay int) error {
+func executeStepWithRetry(ctx context.Context, step ScenarioStep, stepIndex int, totalSteps int, attackEngine *attack.Engine, scenario *Scenario, totalRequests *int, totalFindings *int, delay int) error {
 	maxRetries := 3
 	retryDelay := 500 * time.Millisecond // Reduced from 2 seconds to 500ms
 
@@ -654,7 +654,7 @@ func executeScenario(scenario *Scenario, workers int, timeout string, delay int,
 	}()
 
 	// Create attack engine
-	attackEngine := engine.NewEngine(workers, timeoutDuration)
+	attackEngine := attack.NewEngine(workers, timeoutDuration)
 
 	// Set debug mode if enabled in scenario or command line
 	if debugEnabled {
@@ -709,7 +709,7 @@ func executeScenario(scenario *Scenario, workers int, timeout string, delay int,
 }
 
 // executeAttackStep executes a net:attack step
-func executeAttackStep(ctx context.Context, step ScenarioStep, attackEngine *engine.Engine, scenario *Scenario, delay int) (int, int, error) {
+func executeAttackStep(ctx context.Context, step ScenarioStep, attackEngine *attack.Engine, scenario *Scenario, delay int) (int, int, error) {
 	fmt.Printf("🎯 Executing attack: %s\n", step.Description)
 
 	// Get URL from either URL or Target field
@@ -737,7 +737,7 @@ func executeAttackStep(ctx context.Context, step ScenarioStep, attackEngine *eng
 	}
 
 	// Prepare attack configuration
-	config := &engine.AttackConfig{
+	config := &attack.AttackConfig{
 		Target:      resolvedURL,
 		Method:      method,
 		PayloadSets: step.PayloadSets,

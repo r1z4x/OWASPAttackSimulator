@@ -2,130 +2,122 @@ package httpx
 
 import (
 	"bytes"
-	"crypto/sha256"
+	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
-
-	"github.com/google/uuid"
-	"github.com/owaspattacksimulator/internal/common"
 )
 
-// Client wraps http.Client with request/response logging
+// Client represents an HTTP client with attack capabilities
 type Client struct {
 	httpClient *http.Client
-	store      RequestStore
+	timeout    time.Duration
+	userAgent  string
 }
 
-// RequestStore interface for storing requests and responses
-type RequestStore interface {
-	StoreRequest(req *common.RecordedRequest) error
-	StoreResponse(resp *common.RecordedResponse) error
-}
-
-// NewClient creates a new HTTP client with logging
-func NewClient(store RequestStore) *Client {
+// NewClient creates a new HTTP client
+func NewClient(timeout time.Duration) *Client {
 	return &Client{
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: timeout,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true, // For testing purposes
+				},
+				MaxIdleConns:        100,
+				MaxIdleConnsPerHost: 10,
+				IdleConnTimeout:     90 * time.Second,
+			},
 		},
-		store: store,
+		timeout:   timeout,
+		userAgent: "OWASPAttackSimulator/1.0",
 	}
 }
 
-// Do executes an HTTP request and logs both request and response
-func (c *Client) Do(req *http.Request) (*http.Response, error) {
-	startTime := time.Now()
+// Request represents an HTTP request
+type Request struct {
+	Method  string
+	URL     string
+	Headers map[string]string
+	Body    []byte
+	Params  map[string]string
+}
 
-	// Record the request
-	recordedReq := &common.RecordedRequest{
-		ID:          generateID(),
-		URL:         req.URL.String(),
-		Method:      req.Method,
-		Headers:     headersToMap(req.Header),
-		ContentType: req.Header.Get("Content-Type"),
-		Timestamp:   startTime,
-		Source:      "httpx",
-	}
+// Response represents an HTTP response
+type Response struct {
+	StatusCode int
+	Headers    map[string]string
+	Body       []byte
+	Duration   time.Duration
+	URL        string
+	Method     string // HTTP method used
+	Parameter  string // Parameter that was tested
+	Payload    string // Payload that was used
+	AttackType string // Attack type that was used
+}
 
-	// Read and record request body
-	if req.Body != nil {
-		bodyBytes, err := io.ReadAll(req.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read request body: %w", err)
-		}
-		recordedReq.Body = string(bodyBytes)
-		req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-	}
-
-	// Generate raw HTTP request format
-	recordedReq.Raw = recordedReq.GenerateRawRequest()
-
-	// Store the request
-	if err := c.store.StoreRequest(recordedReq); err != nil {
-		return nil, fmt.Errorf("failed to store request: %w", err)
-	}
-
-	// Execute the request
-	resp, err := c.httpClient.Do(req)
+// DoRequest performs an HTTP request
+func (c *Client) DoRequest(ctx context.Context, req *Request) (*Response, error) {
+	// Build URL with query parameters
+	parsedURL, err := url.Parse(req.URL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid URL: %v", err)
 	}
 
-	// Record the response
-	duration := time.Since(startTime)
-	recordedResp := &common.RecordedResponse{
-		ID:          generateID(),
-		RequestID:   recordedReq.ID,
-		StatusCode:  resp.StatusCode,
-		Headers:     headersToMap(resp.Header),
-		ContentType: resp.Header.Get("Content-Type"),
-		Duration:    duration,
-		Timestamp:   time.Now(),
-	}
-
-	// Read and record response body
-	if resp.Body != nil {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", err)
+	// Add query parameters
+	if req.Params != nil {
+		query := parsedURL.Query()
+		for key, value := range req.Params {
+			query.Set(key, value)
 		}
-		recordedResp.Body = string(bodyBytes)
-		recordedResp.Size = int64(len(bodyBytes))
-		recordedResp.Hash = generateHash(bodyBytes)
-		resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		parsedURL.RawQuery = query.Encode()
 	}
 
-	// Generate raw HTTP response format
-	recordedResp.Raw = recordedResp.GenerateRawResponse()
-
-	// Store the response
-	if err := c.store.StoreResponse(recordedResp); err != nil {
-		return nil, fmt.Errorf("failed to store response: %w", err)
+	// Create HTTP request
+	httpReq, err := http.NewRequestWithContext(ctx, req.Method, parsedURL.String(), bytes.NewReader(req.Body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 
-	return resp, nil
-}
+	// Set headers
+	httpReq.Header.Set("User-Agent", c.userAgent)
+	if req.Headers != nil {
+		for key, value := range req.Headers {
+			httpReq.Header.Set(key, value)
+		}
+	}
 
-// headersToMap converts http.Header to map[string]string
-func headersToMap(header http.Header) map[string]string {
-	result := make(map[string]string)
-	for key, values := range header {
+	// Perform request
+	start := time.Now()
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %v", err)
+	}
+
+	// Convert headers
+	headers := make(map[string]string)
+	for key, values := range resp.Header {
 		if len(values) > 0 {
-			result[key] = values[0]
+			headers[key] = values[0]
 		}
 	}
-	return result
-}
 
-// generateID generates a unique ID for requests/responses
-func generateID() string {
-	return uuid.New().String()
-}
-
-// generateHash generates SHA256 hash of data
-func generateHash(data []byte) string {
-	hash := sha256.Sum256(data)
-	return fmt.Sprintf("%x", hash)
+	return &Response{
+		StatusCode: resp.StatusCode,
+		Headers:    headers,
+		Body:       body,
+		Duration:   time.Since(start),
+		URL:        resp.Request.URL.String(),
+		Method:     req.Method,
+	}, nil
 }

@@ -213,10 +213,61 @@ func (s *SQLiteStore) GetFindings() ([]common.Finding, error) {
 			return nil, fmt.Errorf("failed to scan finding: %w", err)
 		}
 
+		// Get the corresponding request and response to generate raw data
+		request, err := s.getRequestByID(finding.RequestID)
+		if err == nil {
+			finding.RequestRaw = request.GenerateRawRequest()
+		}
+
+		response, err := s.getResponseByID(finding.ResponseID)
+		if err == nil {
+			finding.ResponseRaw = response.GenerateRawResponse()
+		}
+
 		findings = append(findings, finding)
 	}
 
 	return findings, nil
+}
+
+// getRequestByID retrieves a request by ID
+func (s *SQLiteStore) getRequestByID(id string) (*common.RecordedRequest, error) {
+	query := `SELECT id, url, method, headers, body, content_type, variant, timestamp, source FROM requests WHERE id = ?`
+	row := s.db.QueryRow(query, id)
+
+	var req common.RecordedRequest
+	var headersJSON string
+	err := row.Scan(&req.ID, &req.URL, &req.Method, &headersJSON, &req.Body, &req.ContentType, &req.Variant, &req.Timestamp, &req.Source)
+	if err != nil {
+		return nil, fmt.Errorf("failed to scan request: %w", err)
+	}
+
+	if err := json.Unmarshal([]byte(headersJSON), &req.Headers); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal headers: %w", err)
+	}
+
+	return &req, nil
+}
+
+// getResponseByID retrieves a response by ID
+func (s *SQLiteStore) getResponseByID(id string) (*common.RecordedResponse, error) {
+	query := `SELECT id, request_id, status_code, headers, body, content_type, size, duration, timestamp, hash FROM responses WHERE id = ?`
+	row := s.db.QueryRow(query, id)
+
+	var resp common.RecordedResponse
+	var headersJSON string
+	var durationMs int64
+	err := row.Scan(&resp.ID, &resp.RequestID, &resp.StatusCode, &headersJSON, &resp.Body, &resp.ContentType, &resp.Size, &durationMs, &resp.Timestamp, &resp.Hash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to scan response: %w", err)
+	}
+
+	resp.Duration = time.Duration(durationMs) * time.Millisecond
+	if err := json.Unmarshal([]byte(headersJSON), &resp.Headers); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal headers: %w", err)
+	}
+
+	return &resp, nil
 }
 
 // CleanDatabase removes all data from the database
