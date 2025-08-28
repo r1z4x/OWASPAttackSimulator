@@ -76,6 +76,7 @@ sample_*.har
 # CLI and simulation files
 cli
 simulation
+bin/*
 
 # Protocol buffer files
 *.pb.go
