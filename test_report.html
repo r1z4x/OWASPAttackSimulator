@@ -1,53 +1,4 @@
-package report
-
-import (
-	"encoding/json"
-	"fmt"
-	"net/url"
-	"os"
-	"sort"
-	"strings"
-	"text/template"
-	"time"
-
-	"github.com/owaspattacksimulator/internal/common"
-	"github.com/owaspattacksimulator/internal/mutate"
-)
-
-// Reporter handles report generation
-type Reporter struct {
-	mutator *mutate.Mutator
-}
-
-// NewReporter creates a new reporter instance
-func NewReporter() *Reporter {
-	return &Reporter{
-		mutator: mutate.NewMutator(),
-	}
-}
-
-// GenerateReport generates a security report
-func (r *Reporter) GenerateReport(findings []common.Finding, config *common.ReportConfig, totalRequests int, scanDuration time.Duration) error {
-	switch config.OutputFormat {
-	case "html":
-		return r.generateHTMLReport(findings, config, totalRequests, scanDuration)
-	case "json":
-		return r.generateJSONReport(findings, config)
-	default:
-		return fmt.Errorf("unsupported output format: %s (supported: html, json)", config.OutputFormat)
-	}
-}
-
-// generateHTMLReport generates an HTML report with Tailwind CSS and table format
-func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.ReportConfig, totalRequests int, scanDuration time.Duration) error {
-	file, err := os.Create(config.OutputFile)
-	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
-	}
-	defer file.Close()
-
-	// HTML template with Tailwind CSS
-	htmlTemplate := `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -79,8 +30,8 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                     <p class="text-gray-600">OWASP Top 10 Attack Simulator</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-sm text-gray-500">Generated: {{.Generated}}</p>
-                    <p class="text-lg font-semibold text-gray-900">Total Findings: {{.TotalFindings}}</p>
+                    <p class="text-sm text-gray-500">Generated: 2025-08-28T21:03:12+03:00</p>
+                    <p class="text-lg font-semibold text-gray-900">Total Findings: 1</p>
                 </div>
             </div>
         </div>
@@ -98,7 +49,7 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                         </div>
                         <div class="ml-4">
                             <p class="text-sm font-medium text-blue-600">Total Requests</p>
-                            <p class="text-2xl font-bold text-blue-900">{{.TotalRequests}}</p>
+                            <p class="text-2xl font-bold text-blue-900">1</p>
                         </div>
                     </div>
                 </div>
@@ -111,7 +62,7 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                         </div>
                         <div class="ml-4">
                             <p class="text-sm font-medium text-green-600">Requests Tested</p>
-                            <p class="text-2xl font-bold text-green-900">{{.TotalFindings}}</p>
+                            <p class="text-2xl font-bold text-green-900">1</p>
                         </div>
                     </div>
                 </div>
@@ -124,7 +75,7 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                         </div>
                         <div class="ml-4">
                             <p class="text-sm font-medium text-yellow-600">Scan Duration</p>
-                            <p class="text-2xl font-bold text-yellow-900">{{.ScanDuration}}</p>
+                            <p class="text-2xl font-bold text-yellow-900">0ms</p>
                         </div>
                     </div>
                 </div>
@@ -134,7 +85,7 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
         <!-- Category Based Analysis -->
         <div class="bg-white rounded-lg shadow-md p-6 mb-8">
             <h2 class="text-2xl font-bold text-gray-900 mb-6">All Requests Analysis</h2>
-            <p class="text-gray-600 mb-4">Detailed analysis of all {{.TotalFindings}} requests tested during the security scan, organized by OWASP categories.</p>
+            <p class="text-gray-600 mb-4">Detailed analysis of all 1 requests tested during the security scan, organized by OWASP categories.</p>
             
             <!-- Filter Controls -->
             <div class="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -169,12 +120,12 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
 
             </div>
             
-            {{range .OWASPCategories}}
-            <div class="mb-8 category-section" data-category="{{.Category | html}}">
-                <h3 class="text-xl font-semibold text-gray-800 mb-4">{{.Category | html}}</h3>
-                <p class="text-gray-600 mb-4">Total Findings: {{.Count}}</p>
+            
+            <div class="mb-8 category-section" data-category="A01:2021 - Broken Access Control">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">A01:2021 - Broken Access Control</h3>
+                <p class="text-gray-600 mb-4">Total Findings: 1</p>
                 
-                {{if gt .Count 0}}
+                
                 <div class="overflow-x-auto">
                     <table class="min-w-full bg-white border border-gray-200 rounded-lg">
                         <thead class="bg-gray-50">
@@ -193,112 +144,88 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
-                            {{range $index, $finding := .Findings}}
+                            
                             <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-3 text-sm text-gray-900 font-mono">{{add $index 1}}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900 font-mono">1</td>
                                 <td class="px-4 py-3 text-sm text-gray-900 font-mono">
-                                    <span class="text-xs">{{formatTimestamp .Timestamp}}</span>
+                                    <span class="text-xs">28/08/2025 21:03:12</span>
                                 </td>
                                 <td class="px-4 py-3 text-sm font-medium text-gray-900">
-                                    <span class="font-mono text-sm">{{.VulnerabilityType | html}}</span>
+                                    <span class="font-mono text-sm">Security Report</span>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-900">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                        {{if eq .Method "GET"}}bg-blue-100 text-blue-800
-                                        {{else if eq .Method "POST"}}bg-green-100 text-green-800
-                                        {{else if eq .Method "PUT"}}bg-yellow-100 text-yellow-800
-                                        {{else if eq .Method "DELETE"}}bg-red-100 text-red-800
-                                        {{else}}bg-gray-100 text-gray-800{{end}}">
-                                        {{.Method}}
+                                        bg-blue-100 text-blue-800
+                                        ">
+                                        GET
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-900 font-mono">
                                     <div class="flex items-center space-x-2">
-                                        <button onclick="showURLModal('{{.URL | html}}', '{{.VulnerabilityType | html}}')" 
+                                        <button onclick="showURLModal('Command-line report', 'Security Report')" 
                                                 class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 underline cursor-pointer truncate block max-w-xs text-left px-2 py-1 rounded border border-transparent hover:border-blue-300 transition-colors">
-                                            {{.URL | html}}
+                                            Command-line report
                                         </button>
                                     </div>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-900">
-                                    {{if gt .ResponseStatus 0}}
+                                    
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                            {{if ge .ResponseStatus 500}}bg-red-100 text-red-800
-                                            {{else if ge .ResponseStatus 400}}bg-yellow-100 text-yellow-800
-                                            {{else if ge .ResponseStatus 300}}bg-blue-100 text-blue-800
-                                            {{else}}bg-green-100 text-green-800{{end}}">
-                                            {{.ResponseStatus}}
+                                            bg-green-100 text-green-800">
+                                            200
                                         </span>
-                                    {{else}}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                            {{.ResponseStatus}}
-                                        </span>
-                                    {{end}}
+                                    
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-900 font-mono">
-                                    {{if gt .ResponseSize 0}}
-                                        {{formatSize .ResponseSize}}
-                                    {{else}}
-                                        {{.ResponseSize}} bytes
-                                    {{end}}
+                                    
+                                        1.0KB
+                                    
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-900 font-mono">
-                                    {{if gt .ResponseTime 0}}
-                                        <span class="{{if gt .ResponseTime 1000000000}}text-red-600{{else if gt .ResponseTime 500000000}}text-yellow-600{{else}}text-green-600{{end}}">
-                                            {{formatDuration .ResponseTime}}
+                                    
+                                        <span class="text-green-600">
+                                            150ms
                                         </span>
-                                    {{else}}
-                                        {{.ResponseTime}}
-                                    {{end}}
+                                    
                                 </td>
 
                                 <td class="px-4 py-3 text-sm text-gray-900 text-center">
-                                    {{if .Blocked}}
-                                    <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded hover:bg-red-200">
-                                            <span class="text-center">🚫</span>
-                                            <span class="text-center">Blocked</span>
-                                        </span>
-                                    {{else}}
+                                    
                                         <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200">
                                             <span class="text-center">✅</span>
                                             <span class="text-center">Passed</span>
                                         </span>
-                                    {{end}}
+                                    
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-900 text-center">
-                                    {{if .RateLimited}}
-                                        <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded hover:bg-yellow-200">
-                                            <span class="text-center">⏱️</span>
-                                            <span class="text-center">Limited</span>
-                                        </span>
-                                    {{else}}
+                                    
                                         <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200">
                                             <span class="text-center">✅</span>
                                             <span class="text-center">Normal</span>
                                         </span>
-                                    {{end}}
+                                    
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-900 text-center">
                                     <div class="flex space-x-1 justify-center">
-                                        <button data-payload="{{.Payload | html}}" data-type="{{.VulnerabilityType | html}}" 
+                                        <button data-payload="N/A" data-type="Security Report" 
                                                 onclick="showPayloadModal(this.dataset.payload, this.dataset.type)" 
                                                 class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded hover:bg-orange-200">
                                             <span class="text-center">🎯</span>
                                             <span class="text-center">Payload</span>
                                         </button>
-                                        <button data-evidence="{{.Evidence | html}}" data-type="{{.VulnerabilityType | html}}" 
+                                        <button data-evidence="Report generated successfully with available data" data-type="Security Report" 
                                                 onclick="showEvidenceModal(this.dataset.evidence, this.dataset.type)" 
                                                 class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200">
                                             <span class="text-center">📋</span>
                                             <span class="text-center">Evidence</span>
                                         </button>
-                                        <button data-request="{{.RequestRaw | html}}" data-type="{{.VulnerabilityType | html}}" 
+                                        <button data-request="" data-type="Security Report" 
                                                 onclick="showRequestModal(this.dataset.request, this.dataset.type)" 
                                                 class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200">
                                             <span class="text-center">📤</span>
                                             <span class="text-center">Request</span>
                                         </button>
-                                        <button data-response="{{.ResponseRaw | html}}" data-type="{{.VulnerabilityType | html}}" 
+                                        <button data-response="" data-type="Security Report" 
                                                 onclick="showResponseModal(this.dataset.response, this.dataset.type)" 
                                                 class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded hover:bg-purple-200">
                                             <span class="text-center">📥</span>
@@ -307,11 +234,18 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                                     </div>
                                 </td>
                             </tr>
-                            {{end}}
+                            
                         </tbody>
                     </table>
                 </div>
-                {{else}}
+                
+            </div>
+            
+            <div class="mb-8 category-section" data-category="A02:2021 - Cryptographic Failures">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">A02:2021 - Cryptographic Failures</h3>
+                <p class="text-gray-600 mb-4">Total Findings: 0</p>
+                
+                
                 <div class="text-center py-6">
                     <div class="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
                         <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -320,23 +254,141 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                     </div>
                     <p class="text-gray-600 text-sm">No findings in this category - all tests passed successfully.</p>
                 </div>
-                {{end}}
+                
             </div>
-            {{end}}
+            
+            <div class="mb-8 category-section" data-category="A03:2021 - Injection">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">A03:2021 - Injection</h3>
+                <p class="text-gray-600 mb-4">Total Findings: 0</p>
+                
+                
+                <div class="text-center py-6">
+                    <div class="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-600 text-sm">No findings in this category - all tests passed successfully.</p>
+                </div>
+                
+            </div>
+            
+            <div class="mb-8 category-section" data-category="A04:2021 - Insecure Design">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">A04:2021 - Insecure Design</h3>
+                <p class="text-gray-600 mb-4">Total Findings: 0</p>
+                
+                
+                <div class="text-center py-6">
+                    <div class="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-600 text-sm">No findings in this category - all tests passed successfully.</p>
+                </div>
+                
+            </div>
+            
+            <div class="mb-8 category-section" data-category="A05:2021 - Security Misconfiguration">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">A05:2021 - Security Misconfiguration</h3>
+                <p class="text-gray-600 mb-4">Total Findings: 0</p>
+                
+                
+                <div class="text-center py-6">
+                    <div class="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-600 text-sm">No findings in this category - all tests passed successfully.</p>
+                </div>
+                
+            </div>
+            
+            <div class="mb-8 category-section" data-category="A06:2021 - Vulnerable and Outdated Components">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">A06:2021 - Vulnerable and Outdated Components</h3>
+                <p class="text-gray-600 mb-4">Total Findings: 0</p>
+                
+                
+                <div class="text-center py-6">
+                    <div class="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-600 text-sm">No findings in this category - all tests passed successfully.</p>
+                </div>
+                
+            </div>
+            
+            <div class="mb-8 category-section" data-category="A07:2021 - Identification and Authentication Failures">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">A07:2021 - Identification and Authentication Failures</h3>
+                <p class="text-gray-600 mb-4">Total Findings: 0</p>
+                
+                
+                <div class="text-center py-6">
+                    <div class="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-600 text-sm">No findings in this category - all tests passed successfully.</p>
+                </div>
+                
+            </div>
+            
+            <div class="mb-8 category-section" data-category="A08:2021 - Software and Data Integrity Failures">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">A08:2021 - Software and Data Integrity Failures</h3>
+                <p class="text-gray-600 mb-4">Total Findings: 0</p>
+                
+                
+                <div class="text-center py-6">
+                    <div class="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-600 text-sm">No findings in this category - all tests passed successfully.</p>
+                </div>
+                
+            </div>
+            
+            <div class="mb-8 category-section" data-category="A09:2021 - Security Logging and Monitoring Failures">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">A09:2021 - Security Logging and Monitoring Failures</h3>
+                <p class="text-gray-600 mb-4">Total Findings: 0</p>
+                
+                
+                <div class="text-center py-6">
+                    <div class="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-600 text-sm">No findings in this category - all tests passed successfully.</p>
+                </div>
+                
+            </div>
+            
+            <div class="mb-8 category-section" data-category="A10:2021 - Server-Side Request Forgery">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">A10:2021 - Server-Side Request Forgery</h3>
+                <p class="text-gray-600 mb-4">Total Findings: 0</p>
+                
+                
+                <div class="text-center py-6">
+                    <div class="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-600 text-sm">No findings in this category - all tests passed successfully.</p>
+                </div>
+                
+            </div>
+            
         </div>
 
         <!-- No Findings Message -->
-        {{if eq .TotalFindings 0}}
-        <div class="text-center py-12">
-            <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-            </div>
-            <h1 class="text-2xl font-bold text-gray-900 mb-2">Security Assessment Complete</h1>
-            <p class="text-gray-600 mb-4">The comprehensive security scan has been completed. No security vulnerabilities or potential threats were identified during this assessment.</p>
-        </div>
-        {{end}}
+        
     </div>
 
     <!-- Payload Modal -->
@@ -493,6 +545,9 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                         <button onclick="deselectAllVariants()" class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700">
                             Hiçbirini Seçme
                         </button>
+                        <button onclick="selectOnlyTestedVariants()" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                            Sadece Test Edilenleri Seç
+                        </button>
                         <div class="text-sm text-gray-600 ml-2">
                             <span id="selected-variant-count">0</span> varyant seçildi
                         </div>
@@ -501,19 +556,277 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
 
                 <!-- Variant Categories -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {{range $category, $variants := .AvailableVariants}}
+                    
                     <div class="variant-category">
-                        <h4 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">{{$category}}</h4>
+                        <h4 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">A01:2021 - Broken Access Control</h4>
                         <div class="space-y-2">
-                            {{range $variant := $variants}}
+                            
                             <label class="flex items-center variant-item">
-                                <input type="checkbox" class="variant-filter mr-3" data-variant="{{$variant}}" data-category="{{$category}}">
-                                <span class="text-sm text-gray-700">{{$variant}}</span>
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="broken_access_control" data-category="A01:2021 - Broken Access Control">
+                                <span class="text-sm text-gray-700">broken_access_control</span>
                             </label>
-                            {{end}}
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="idor" data-category="A01:2021 - Broken Access Control">
+                                <span class="text-sm text-gray-700">idor</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="privilege_escalation" data-category="A01:2021 - Broken Access Control">
+                                <span class="text-sm text-gray-700">privilege_escalation</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="jwt_manipulation" data-category="A01:2021 - Broken Access Control">
+                                <span class="text-sm text-gray-700">jwt_manipulation</span>
+                            </label>
+                            
                         </div>
                     </div>
-                    {{end}}
+                    
+                    <div class="variant-category">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">A02:2021 - Cryptographic Failures</h4>
+                        <div class="space-y-2">
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="weak_crypto" data-category="A02:2021 - Cryptographic Failures">
+                                <span class="text-sm text-gray-700">weak_crypto</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="weak_hashing" data-category="A02:2021 - Cryptographic Failures">
+                                <span class="text-sm text-gray-700">weak_hashing</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="insecure_transport" data-category="A02:2021 - Cryptographic Failures">
+                                <span class="text-sm text-gray-700">insecure_transport</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="weak_randomness" data-category="A02:2021 - Cryptographic Failures">
+                                <span class="text-sm text-gray-700">weak_randomness</span>
+                            </label>
+                            
+                        </div>
+                    </div>
+                    
+                    <div class="variant-category">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">A03:2021 - Injection</h4>
+                        <div class="space-y-2">
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="xss" data-category="A03:2021 - Injection">
+                                <span class="text-sm text-gray-700">xss</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="sqli" data-category="A03:2021 - Injection">
+                                <span class="text-sm text-gray-700">sqli</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="command_injection" data-category="A03:2021 - Injection">
+                                <span class="text-sm text-gray-700">command_injection</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="ldap_injection" data-category="A03:2021 - Injection">
+                                <span class="text-sm text-gray-700">ldap_injection</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="nosql_injection" data-category="A03:2021 - Injection">
+                                <span class="text-sm text-gray-700">nosql_injection</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="header_injection" data-category="A03:2021 - Injection">
+                                <span class="text-sm text-gray-700">header_injection</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="template_injection" data-category="A03:2021 - Injection">
+                                <span class="text-sm text-gray-700">template_injection</span>
+                            </label>
+                            
+                        </div>
+                    </div>
+                    
+                    <div class="variant-category">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">A04:2021 - Insecure Design</h4>
+                        <div class="space-y-2">
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="business_logic_flaw" data-category="A04:2021 - Insecure Design">
+                                <span class="text-sm text-gray-700">business_logic_flaw</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="race_condition" data-category="A04:2021 - Insecure Design">
+                                <span class="text-sm text-gray-700">race_condition</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="insecure_workflow" data-category="A04:2021 - Insecure Design">
+                                <span class="text-sm text-gray-700">insecure_workflow</span>
+                            </label>
+                            
+                        </div>
+                    </div>
+                    
+                    <div class="variant-category">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">A05:2021 - Security Misconfiguration</h4>
+                        <div class="space-y-2">
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="default_credentials" data-category="A05:2021 - Security Misconfiguration">
+                                <span class="text-sm text-gray-700">default_credentials</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="debug_mode" data-category="A05:2021 - Security Misconfiguration">
+                                <span class="text-sm text-gray-700">debug_mode</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="verbose_errors" data-category="A05:2021 - Security Misconfiguration">
+                                <span class="text-sm text-gray-700">verbose_errors</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="missing_headers" data-category="A05:2021 - Security Misconfiguration">
+                                <span class="text-sm text-gray-700">missing_headers</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="weak_cors" data-category="A05:2021 - Security Misconfiguration">
+                                <span class="text-sm text-gray-700">weak_cors</span>
+                            </label>
+                            
+                        </div>
+                    </div>
+                    
+                    <div class="variant-category">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">A06:2021 - Vulnerable and Outdated Components</h4>
+                        <div class="space-y-2">
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="known_vulnerability" data-category="A06:2021 - Vulnerable and Outdated Components">
+                                <span class="text-sm text-gray-700">known_vulnerability</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="outdated_component" data-category="A06:2021 - Vulnerable and Outdated Components">
+                                <span class="text-sm text-gray-700">outdated_component</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="version_disclosure" data-category="A06:2021 - Vulnerable and Outdated Components">
+                                <span class="text-sm text-gray-700">version_disclosure</span>
+                            </label>
+                            
+                        </div>
+                    </div>
+                    
+                    <div class="variant-category">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">A07:2021 - Identification and Authentication Failures</h4>
+                        <div class="space-y-2">
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="weak_auth" data-category="A07:2021 - Identification and Authentication Failures">
+                                <span class="text-sm text-gray-700">weak_auth</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="session_fixation" data-category="A07:2021 - Identification and Authentication Failures">
+                                <span class="text-sm text-gray-700">session_fixation</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="session_timeout" data-category="A07:2021 - Identification and Authentication Failures">
+                                <span class="text-sm text-gray-700">session_timeout</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="weak_password" data-category="A07:2021 - Identification and Authentication Failures">
+                                <span class="text-sm text-gray-700">weak_password</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="brute_force" data-category="A07:2021 - Identification and Authentication Failures">
+                                <span class="text-sm text-gray-700">brute_force</span>
+                            </label>
+                            
+                        </div>
+                    </div>
+                    
+                    <div class="variant-category">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">A08:2021 - Software and Data Integrity Failures</h4>
+                        <div class="space-y-2">
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="insecure_deserialization" data-category="A08:2021 - Software and Data Integrity Failures">
+                                <span class="text-sm text-gray-700">insecure_deserialization</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="code_injection" data-category="A08:2021 - Software and Data Integrity Failures">
+                                <span class="text-sm text-gray-700">code_injection</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="supply_chain_attack" data-category="A08:2021 - Software and Data Integrity Failures">
+                                <span class="text-sm text-gray-700">supply_chain_attack</span>
+                            </label>
+                            
+                        </div>
+                    </div>
+                    
+                    <div class="variant-category">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">A09:2021 - Security Logging and Monitoring Failures</h4>
+                        <div class="space-y-2">
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="log_injection" data-category="A09:2021 - Security Logging and Monitoring Failures">
+                                <span class="text-sm text-gray-700">log_injection</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="log_bypass" data-category="A09:2021 - Security Logging and Monitoring Failures">
+                                <span class="text-sm text-gray-700">log_bypass</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="audit_trail_tampering" data-category="A09:2021 - Security Logging and Monitoring Failures">
+                                <span class="text-sm text-gray-700">audit_trail_tampering</span>
+                            </label>
+                            
+                        </div>
+                    </div>
+                    
+                    <div class="variant-category">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">A10:2021 - Server-Side Request Forgery</h4>
+                        <div class="space-y-2">
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="ssrf" data-category="A10:2021 - Server-Side Request Forgery">
+                                <span class="text-sm text-gray-700">ssrf</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="xxe" data-category="A10:2021 - Server-Side Request Forgery">
+                                <span class="text-sm text-gray-700">xxe</span>
+                            </label>
+                            
+                            <label class="flex items-center variant-item">
+                                <input type="checkbox" class="variant-filter mr-3" data-variant="open_redirect" data-category="A10:2021 - Server-Side Request Forgery">
+                                <span class="text-sm text-gray-700">open_redirect</span>
+                            </label>
+                            
+                        </div>
+                    </div>
+                    
                 </div>
 
 
@@ -554,6 +867,9 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                         </button>
                         <button onclick="deselectAllCategories()" class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700">
                             Hiçbirini Seçme
+                        </button>
+                        <button onclick="selectOnlyTestedCategories()" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                            Sadece Test Edilenleri Seç
                         </button>
                         <div class="text-sm text-gray-600 ml-2">
                             <span id="selected-category-count">0</span> kategori seçildi
@@ -800,7 +1116,21 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
             applyVariantFilters(); // Apply filtering immediately
         }
 
-
+        function selectOnlyTestedVariants() {
+            // First deselect all
+            deselectAllVariants();
+            
+            // Then select only the ones that are available in the data
+            const checkboxes = document.querySelectorAll('.variant-filter');
+            checkboxes.forEach(checkbox => {
+                const variant = checkbox.dataset.variant;
+                if (availableVariants.has(variant)) {
+                    checkbox.checked = true;
+                }
+            });
+            updateSelectedVariantCount();
+            applyVariantFilters(); // Apply filtering immediately
+        }
 
         function updateSelectedVariantCount() {
             const checkboxes = document.querySelectorAll('.variant-filter:checked');
@@ -1006,7 +1336,21 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
             applyCategoryFilters(); // Apply filtering immediately
         }
 
-
+        function selectOnlyTestedCategories() {
+            // First deselect all
+            deselectAllCategories();
+            
+            // Then select only the ones that are available in the data
+            const checkboxes = document.querySelectorAll('.category-filter');
+            checkboxes.forEach(checkbox => {
+                const category = checkbox.dataset.category;
+                if (availableCategories.has(category)) {
+                    checkbox.checked = true;
+                }
+            });
+            updateSelectedCategoryCount();
+            applyCategoryFilters(); // Apply filtering immediately
+        }
 
         function updateSelectedCategoryCount() {
             const checkboxes = document.querySelectorAll('.category-filter:checked');
@@ -1075,718 +1419,4 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
         }
     </script>
 </body>
-</html>`
-
-	// Group findings by OWASP category for table analysis
-	categoryGroups := r.groupFindingsByOWASPCategory(findings)
-
-	data := struct {
-		Generated         string
-		TotalFindings     int
-		TotalRequests     int
-		ScanDuration      string
-		OWASPCategories   []OWASPCategoryData
-		Findings          []findingData
-		AvailableVariants map[string][]string
-	}{
-		Generated:         time.Now().Format(time.RFC3339),
-		TotalFindings:     len(findings),
-		TotalRequests:     totalRequests,
-		ScanDuration:      formatDuration(scanDuration),
-		OWASPCategories:   categoryGroups,
-		Findings:          r.convertToFindingData(findings),
-		AvailableVariants: r.getAvailableVariants(),
-	}
-
-	// Create template with custom functions
-	funcMap := template.FuncMap{
-		"add": func(a, b int) int {
-			return a + b
-		},
-		"formatDuration": func(d time.Duration) string {
-			return fmt.Sprintf("%.0fms", float64(d.Nanoseconds())/1000000.0)
-		},
-		"formatSize": func(size int64) string {
-			if size == 0 {
-				return "-"
-			}
-			if size < 1024 {
-				return fmt.Sprintf("%dB", size)
-			} else if size < 1048576 {
-				return fmt.Sprintf("%.1fKB", float64(size)/1024.0)
-			} else {
-				return fmt.Sprintf("%.1fMB", float64(size)/1048576.0)
-			}
-		},
-		"formatTimestamp": func(t time.Time) string {
-			return t.Format("02/01/2006 15:04:05")
-		},
-		"replace": func(old, new, s string) string {
-			return strings.ReplaceAll(s, old, new)
-		},
-	}
-
-	tmpl, err := template.New("report").Funcs(funcMap).Parse(htmlTemplate)
-	if err != nil {
-		return fmt.Errorf("failed to parse template: %w", err)
-	}
-
-	return tmpl.Execute(file, data)
-}
-
-// AllAttackTypeData represents all attack types data for HTML template
-type AllAttackTypeData struct {
-	AttackType  string
-	Category    string
-	Requests    bool
-	Blocked     bool
-	RateLimited bool
-}
-
-// OWASPCategoryData represents OWASP category data for HTML template
-type OWASPCategoryData struct {
-	Category string
-	Count    int
-	Findings []AnalysisGroup
-}
-
-// groupFindingsByOWASPCategory groups findings by OWASP category for HTML report
-func (r *Reporter) groupFindingsByOWASPCategory(findings []common.Finding) []OWASPCategoryData {
-	categoryGroups := make(map[common.OWASPCategory][]common.Finding)
-	for _, finding := range findings {
-		categoryGroups[finding.Category] = append(categoryGroups[finding.Category], finding)
-	}
-
-	// Sort categories by OWASP Top 10 order
-	categoryOrder := []common.OWASPCategory{
-		common.OWASPCategoryA01BrokenAccessControl,
-		common.OWASPCategoryA02CryptographicFailures,
-		common.OWASPCategoryA03Injection,
-		common.OWASPCategoryA04InsecureDesign,
-		common.OWASPCategoryA05SecurityMisconfiguration,
-		common.OWASPCategoryA06VulnerableComponents,
-		common.OWASPCategoryA07AuthFailures,
-		common.OWASPCategoryA08SoftwareDataIntegrity,
-		common.OWASPCategoryA09LoggingFailures,
-		common.OWASPCategoryA10SSRF,
-	}
-
-	var result []OWASPCategoryData
-	for _, category := range categoryOrder {
-		findings, exists := categoryGroups[category]
-		if !exists {
-			findings = []common.Finding{} // Empty findings for categories with no results
-		}
-		analysisGroups := r.groupFindingsForAnalysis(findings)
-		result = append(result, OWASPCategoryData{
-			Category: string(category),
-			Count:    len(findings),
-			Findings: analysisGroups,
-		})
-	}
-
-	return result
-}
-
-// calculateTotalRequests calculates the total number of requests from findings
-// This function is deprecated - use the totalRequests parameter from AttackResult instead
-func (r *Reporter) calculateTotalRequests(findings []common.Finding) int {
-	// For now, we'll estimate based on findings
-	// In a real implementation, this would come from the scan engine
-	if len(findings) == 0 {
-		return 1517 // Default value when no findings
-	}
-
-	// Estimate based on findings and typical scan patterns
-	// This is a rough estimate - in practice, this should come from the scan engine
-	return 1517
-}
-
-// formatDuration formats duration in a human-readable format
-func formatDuration(d time.Duration) string {
-	if d < time.Second {
-		return fmt.Sprintf("%.0fms", float64(d.Nanoseconds())/1000000.0)
-	}
-
-	if d < time.Minute {
-		return fmt.Sprintf("%.1fs", d.Seconds())
-	}
-
-	if d < time.Hour {
-		minutes := int(d.Minutes())
-		seconds := int(d.Seconds()) % 60
-		return fmt.Sprintf("%dm%ds", minutes, seconds)
-	}
-
-	hours := int(d.Hours())
-	minutes := int(d.Minutes()) % 60
-	return fmt.Sprintf("%dh%dm", hours, minutes)
-}
-
-// calculateScanDuration calculates the scan duration from findings
-// This function is deprecated - use the scanDuration parameter from AttackResult instead
-func (r *Reporter) calculateScanDuration(findings []common.Finding) string {
-	// For now, we'll use a default value
-	// In a real implementation, this would come from the scan engine
-	return "4m0s"
-}
-
-// generateJSONReport generates a JSON report
-func (r *Reporter) generateJSONReport(findings []common.Finding, config *common.ReportConfig) error {
-	file, err := os.Create(config.OutputFile)
-	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
-	}
-	defer file.Close()
-
-	report := struct {
-		Generated     string           `json:"generated"`
-		TotalFindings int              `json:"total_findings"`
-		Findings      []common.Finding `json:"findings"`
-	}{
-		Generated:     time.Now().Format(time.RFC3339),
-		TotalFindings: len(findings),
-		Findings:      findings,
-	}
-
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(report)
-}
-
-// AnalysisGroup represents a group of findings for detailed analysis
-type AnalysisGroup struct {
-	VulnerabilityType string
-	Category          string
-	Method            string
-	ResponseStatus    int
-	ResponseSize      int64
-	ResponseTime      time.Duration
-	Blocked           bool
-	RateLimited       bool
-	URL               string
-	URLPattern        string
-	Payload           string
-	Evidence          string
-	RequestData       string
-	ResponseData      string
-	RequestRaw        string
-	ResponseRaw       string
-	Timestamp         time.Time
-}
-
-// groupFindingsForAnalysis groups findings for detailed vulnerability analysis
-func (r *Reporter) groupFindingsForAnalysis(findings []common.Finding) []AnalysisGroup {
-	var groups []AnalysisGroup
-
-	for _, finding := range findings {
-		// Extract URL pattern (simplify URL for analysis)
-		urlPattern := r.extractURLPattern(finding.URL)
-
-		// Keep payload full length (no truncation)
-		payload := finding.Payload
-
-		// Keep evidence full length (no truncation)
-		evidence := finding.Evidence
-
-		// Create request data for modal
-		requestData := r.createRequestData(finding)
-		responseData := r.createResponseData(finding)
-
-		groups = append(groups, AnalysisGroup{
-			VulnerabilityType: finding.Type,
-			Category:          string(finding.Category),
-			Method:            finding.Method,
-			ResponseStatus:    finding.ResponseStatus,
-			ResponseSize:      finding.ResponseSize,
-			ResponseTime:      finding.ResponseTime,
-			Blocked:           finding.Blocked,
-			RateLimited:       finding.RateLimited,
-			URL:               finding.URL,
-			URLPattern:        urlPattern,
-			Payload:           payload,
-			Evidence:          evidence,
-			RequestData:       requestData,
-			ResponseData:      responseData,
-			RequestRaw:        finding.RequestRaw,
-			ResponseRaw:       finding.ResponseRaw,
-			Timestamp:         finding.Timestamp,
-		})
-	}
-
-	// Sort by vulnerability type and method
-	sort.Slice(groups, func(i, j int) bool {
-		if groups[i].VulnerabilityType != groups[j].VulnerabilityType {
-			return groups[i].VulnerabilityType < groups[j].VulnerabilityType
-		}
-		return groups[i].Method < groups[j].Method
-	})
-
-	return groups
-}
-
-// extractContentType extracts content type from finding
-func (r *Reporter) extractContentType(finding common.Finding) string {
-	// This would need to be enhanced based on actual response data
-	// For now, return a placeholder
-	return "text/html"
-}
-
-// extractURLPattern extracts a simplified URL pattern
-func (r *Reporter) extractURLPattern(url string) string {
-	// Parse URL to extract path and simplify
-	if strings.Contains(url, "?") {
-		parts := strings.Split(url, "?")
-		path := parts[0]
-		// Remove domain and protocol if present
-		if strings.Contains(path, "://") {
-			pathParts := strings.Split(path, "/")
-			if len(pathParts) > 3 {
-				path = "/" + strings.Join(pathParts[3:], "/")
-			}
-		}
-		return path + "?[params]"
-	}
-
-	// Remove domain and protocol if present
-	if strings.Contains(url, "://") {
-		pathParts := strings.Split(url, "/")
-		if len(pathParts) > 3 {
-			return "/" + strings.Join(pathParts[3:], "/")
-		}
-	}
-	return url
-}
-
-// createRequestData creates formatted request data for modal display
-func (r *Reporter) createRequestData(finding common.Finding) string {
-	requestData := fmt.Sprintf("Method: %s\nURL: %s\nPayload: %s\nTimestamp: %s",
-		finding.Method,
-		finding.URL,
-		finding.Payload,
-		finding.Timestamp.Format("2006-01-02 15:04:05"))
-	return requestData
-}
-
-// createResponseData creates formatted response data for modal display
-func (r *Reporter) createResponseData(finding common.Finding) string {
-	responseData := fmt.Sprintf("Status: %d\nSize: %d bytes\nTime: %.0fms\nEvidence: %s",
-		finding.ResponseStatus,
-		finding.ResponseSize,
-		finding.ResponseTime.Milliseconds(),
-		finding.Evidence)
-	return responseData
-}
-
-// determineVulnerabilityStatus determines if vulnerability is confirmed or potential
-func (r *Reporter) determineVulnerabilityStatus(finding common.Finding) string {
-	// Enhanced logic to determine vulnerability status
-	if strings.Contains(finding.Evidence, "reflected") || strings.Contains(finding.Evidence, "executed") {
-		return "🔴 Confirmed"
-	} else if strings.Contains(finding.Evidence, "detected") {
-		return "🟡 Potential"
-	}
-	return "⚪ Unclear"
-}
-
-// findingData represents finding data for HTML template
-type findingData struct {
-	Title             string
-	Category          string
-	URL               string
-	Method            string
-	Description       string
-	Evidence          string
-	Payload           string
-	Timestamp         string
-	ResponseStatus    int
-	ResponseSize      int64
-	ResponseTime      time.Duration
-	Blocked           bool
-	RateLimited       bool
-	URLPattern        string
-	VulnerabilityType string
-	RequestData       string
-	ResponseData      string
-	RequestRaw        string
-	ResponseRaw       string
-}
-
-// convertToFindingData converts findings to template data
-func (r *Reporter) convertToFindingData(findings []common.Finding) []findingData {
-	var data []findingData
-	for _, finding := range findings {
-		requestData := r.createRequestDataFromFinding(finding)
-		responseData := r.createResponseDataFromFinding(finding)
-
-		data = append(data, findingData{
-			Title:             finding.Title,
-			Category:          string(finding.Category),
-			URL:               finding.URL,
-			Method:            finding.Method,
-			Description:       finding.Description,
-			Evidence:          finding.Evidence,
-			Payload:           finding.Payload,
-			Timestamp:         finding.Timestamp.Format(time.RFC3339),
-			ResponseStatus:    finding.ResponseStatus,
-			ResponseSize:      finding.ResponseSize,
-			ResponseTime:      finding.ResponseTime,
-			Blocked:           finding.Blocked,
-			RateLimited:       finding.RateLimited,
-			URLPattern:        r.extractURLPattern(finding.URL),
-			VulnerabilityType: finding.Type,
-			RequestData:       requestData,
-			ResponseData:      responseData,
-			RequestRaw:        finding.RequestRaw,
-			ResponseRaw:       finding.ResponseRaw,
-		})
-	}
-
-	// Sort by category
-	sort.Slice(data, func(i, j int) bool {
-		return data[i].Category < data[j].Category
-	})
-
-	return data
-}
-
-// createRequestDataFromFinding creates request data from finding
-func (r *Reporter) createRequestDataFromFinding(finding common.Finding) string {
-	// Try to get the actual raw request from the store
-	// For now, we'll build it from the finding data
-	var requestData strings.Builder
-
-	// Parse URL to get path and query
-	parsedURL, err := url.Parse(finding.URL)
-	if err != nil {
-		return "Invalid URL"
-	}
-
-	// Build request line
-	path := parsedURL.Path
-	if parsedURL.RawQuery != "" {
-		path += "?" + parsedURL.RawQuery
-	}
-	requestData.WriteString(fmt.Sprintf("%s %s HTTP/1.1\n", finding.Method, path))
-
-	// Add headers
-	if host := parsedURL.Host; host != "" {
-		requestData.WriteString(fmt.Sprintf("Host: %s\n", host))
-	}
-	requestData.WriteString("User-Agent: OWASPAttackSimulator/1.0\n")
-	requestData.WriteString("Accept: */*\n")
-	requestData.WriteString("Accept-Language: en-US,en;q=0.9\n")
-	requestData.WriteString("Accept-Encoding: gzip, deflate\n")
-	requestData.WriteString("Connection: keep-alive\n")
-
-	// Add content type and length if there's a payload
-	if finding.Payload != "" {
-		requestData.WriteString("Content-Type: application/x-www-form-urlencoded\n")
-		requestData.WriteString(fmt.Sprintf("Content-Length: %d\n", len(finding.Payload)))
-		requestData.WriteString("\n")
-		requestData.WriteString(finding.Payload)
-	} else {
-		requestData.WriteString("\n")
-	}
-
-	return requestData.String()
-}
-
-// extractHost extracts host from URL
-func extractHost(url string) string {
-	if strings.HasPrefix(url, "http://") {
-		url = strings.TrimPrefix(url, "http://")
-	} else if strings.HasPrefix(url, "https://") {
-		url = strings.TrimPrefix(url, "https://")
-	}
-
-	if idx := strings.Index(url, "/"); idx != -1 {
-		return url[:idx]
-	}
-	return url
-}
-
-// createResponseDataFromFinding creates response data from finding
-func (r *Reporter) createResponseDataFromFinding(finding common.Finding) string {
-	var responseData strings.Builder
-
-	// Build raw HTTP response
-	responseData.WriteString(fmt.Sprintf("HTTP/1.1 %d %s\n", finding.ResponseStatus, getStatusText(finding.ResponseStatus)))
-	responseData.WriteString("Server: nginx/1.20.1\n")
-	responseData.WriteString("Date: " + time.Now().Format("Mon, 02 Jan 2006 15:04:05 GMT") + "\n")
-	responseData.WriteString("Content-Type: text/html; charset=utf-8\n")
-	responseData.WriteString(fmt.Sprintf("Content-Length: %d\n", finding.ResponseSize))
-	responseData.WriteString("Connection: keep-alive\n")
-
-	// Add security headers if detected
-	if finding.Blocked {
-		responseData.WriteString("X-WAF-Status: blocked\n")
-		responseData.WriteString("X-Security: WAF detected\n")
-	}
-	if finding.RateLimited {
-		responseData.WriteString("X-RateLimit-Status: limited\n")
-		responseData.WriteString("Retry-After: 60\n")
-	}
-
-	responseData.WriteString("\n")
-
-	// Add response body (evidence or simulated response)
-	if finding.Evidence != "" {
-		responseData.WriteString(fmt.Sprintf("<!-- Evidence: %s -->\n", finding.Evidence))
-	}
-
-	// Simulate response body based on status code
-	switch finding.ResponseStatus {
-	case 200:
-		responseData.WriteString("<html><body><h1>OK</h1><p>Request processed successfully</p></body></html>")
-	case 403:
-		responseData.WriteString("<html><body><h1>Forbidden</h1><p>Access denied by security policy</p></body></html>")
-	case 429:
-		responseData.WriteString("<html><body><h1>Too Many Requests</h1><p>Rate limit exceeded</p></body></html>")
-	case 500:
-		responseData.WriteString("<html><body><h1>Internal Server Error</h1><p>Server encountered an error</p></body></html>")
-	default:
-		responseData.WriteString("<html><body><h1>Response</h1><p>Security scan response</p></body></html>")
-	}
-
-	return responseData.String()
-}
-
-// getStatusText returns HTTP status text
-func getStatusText(status int) string {
-	switch status {
-	case 200:
-		return "OK"
-	case 403:
-		return "Forbidden"
-	case 429:
-		return "Too Many Requests"
-	case 500:
-		return "Internal Server Error"
-	default:
-		return "Unknown"
-	}
-}
-
-// getAvailableVariants returns all available variant types from mutator
-func (r *Reporter) getAvailableVariants() map[string][]string {
-	variants := make(map[string][]string)
-
-	// Get all attack types from common package
-	attackTypes := []common.AttackType{
-		// A01: Broken Access Control
-		common.AttackBrokenAccessControl,
-		common.AttackIDOR,
-		common.AttackPrivilegeEscalation,
-		common.AttackJWTManipulation,
-
-		// A02: Cryptographic Failures
-		common.AttackWeakCrypto,
-		common.AttackWeakHashing,
-		common.AttackInsecureTransport,
-		common.AttackWeakRandomness,
-
-		// A03: Injection
-		common.AttackXSS,
-		common.AttackSQLi,
-		common.AttackCommandInj,
-		common.AttackLDAPInjection,
-		common.AttackNoSQLInjection,
-		common.AttackHeaderInjection,
-		common.AttackTemplateInjection,
-
-		// A04: Insecure Design
-		common.AttackBusinessLogicFlaw,
-		common.AttackRaceCondition,
-		common.AttackInsecureWorkflow,
-
-		// A05: Security Misconfiguration
-		common.AttackDefaultCredentials,
-		common.AttackDebugMode,
-		common.AttackVerboseErrors,
-		common.AttackMissingHeaders,
-		common.AttackWeakCORS,
-
-		// A06: Vulnerable Components
-		common.AttackKnownVulnerability,
-		common.AttackOutdatedComponent,
-		common.AttackVersionDisclosure,
-
-		// A07: Authentication Failures
-		common.AttackWeakAuth,
-		common.AttackSessionFixation,
-		common.AttackSessionTimeout,
-		common.AttackWeakPassword,
-		common.AttackBruteForce,
-
-		// A08: Software and Data Integrity Failures
-		common.AttackInsecureDeserialization,
-		common.AttackCodeInjection,
-		common.AttackSupplyChainAttack,
-
-		// A09: Security Logging and Monitoring Failures
-		common.AttackLogInjection,
-		common.AttackLogBypass,
-		common.AttackAuditTrailTampering,
-
-		// A10: Server-Side Request Forgery
-		common.AttackSSRF,
-		common.AttackXXE,
-		common.AttackOpenRedirect,
-	}
-
-	// Group attack types by OWASP category
-	for _, attackType := range attackTypes {
-		category := r.getOWASPCategoryForAttackType(attackType)
-		variants[category] = append(variants[category], string(attackType))
-	}
-
-	return variants
-}
-
-// getOWASPCategoryForAttackType returns the OWASP category for a given attack type
-func (r *Reporter) getOWASPCategoryForAttackType(attackType common.AttackType) string {
-	switch attackType {
-	// A01: Broken Access Control
-	case common.AttackBrokenAccessControl, common.AttackIDOR, common.AttackPrivilegeEscalation, common.AttackJWTManipulation:
-		return "A01:2021 - Broken Access Control"
-
-	// A02: Cryptographic Failures
-	case common.AttackWeakCrypto, common.AttackWeakHashing, common.AttackInsecureTransport, common.AttackWeakRandomness:
-		return "A02:2021 - Cryptographic Failures"
-
-	// A03: Injection
-	case common.AttackXSS, common.AttackSQLi, common.AttackCommandInj, common.AttackLDAPInjection, common.AttackNoSQLInjection, common.AttackHeaderInjection, common.AttackTemplateInjection:
-		return "A03:2021 - Injection"
-
-	// A04: Insecure Design
-	case common.AttackBusinessLogicFlaw, common.AttackRaceCondition, common.AttackInsecureWorkflow:
-		return "A04:2021 - Insecure Design"
-
-	// A05: Security Misconfiguration
-	case common.AttackDefaultCredentials, common.AttackDebugMode, common.AttackVerboseErrors, common.AttackMissingHeaders, common.AttackWeakCORS:
-		return "A05:2021 - Security Misconfiguration"
-
-	// A06: Vulnerable Components
-	case common.AttackKnownVulnerability, common.AttackOutdatedComponent, common.AttackVersionDisclosure:
-		return "A06:2021 - Vulnerable and Outdated Components"
-
-	// A07: Authentication Failures
-	case common.AttackWeakAuth, common.AttackSessionFixation, common.AttackSessionTimeout, common.AttackWeakPassword, common.AttackBruteForce:
-		return "A07:2021 - Identification and Authentication Failures"
-
-	// A08: Software and Data Integrity Failures
-	case common.AttackInsecureDeserialization, common.AttackCodeInjection, common.AttackSupplyChainAttack:
-		return "A08:2021 - Software and Data Integrity Failures"
-
-	// A09: Security Logging and Monitoring Failures
-	case common.AttackLogInjection, common.AttackLogBypass, common.AttackAuditTrailTampering:
-		return "A09:2021 - Security Logging and Monitoring Failures"
-
-	// A10: Server-Side Request Forgery
-	case common.AttackSSRF, common.AttackXXE, common.AttackOpenRedirect:
-		return "A10:2021 - Server-Side Request Forgery"
-
-	default:
-		return "A03:2021 - Injection" // Default to Injection for unknown types
-	}
-}
-
-// generateAllAttackTypesData generates data for all attack types
-func (r *Reporter) generateAllAttackTypesData(findings []common.Finding) []AllAttackTypeData {
-	// Create a map of request types
-	requestTypes := make(map[string]bool)
-	blockedAttackTypes := make(map[string]bool)
-	rateLimitedAttackTypes := make(map[string]bool)
-
-	for _, finding := range findings {
-		requestTypes[finding.Type] = true
-		if finding.Blocked {
-			blockedAttackTypes[finding.Type] = true
-		}
-		if finding.RateLimited {
-			rateLimitedAttackTypes[finding.Type] = true
-		}
-	}
-
-	// Define all attack types with their categories
-	allAttackTypes := []struct {
-		AttackType string
-		Category   string
-	}{
-		// A01: Broken Access Control
-		{string(common.AttackBrokenAccessControl), "A01: Broken Access Control"},
-		{string(common.AttackIDOR), "A01: Broken Access Control"},
-		{string(common.AttackPrivilegeEscalation), "A01: Broken Access Control"},
-		{string(common.AttackJWTManipulation), "A01: Broken Access Control"},
-
-		// A02: Cryptographic Failures
-		{string(common.AttackWeakCrypto), "A02: Cryptographic Failures"},
-		{string(common.AttackWeakHashing), "A02: Cryptographic Failures"},
-		{string(common.AttackInsecureTransport), "A02: Cryptographic Failures"},
-
-		// A03: Injection
-		{string(common.AttackXSS), "A03: Injection"},
-		{string(common.AttackSQLi), "A03: Injection"},
-		{string(common.AttackCommandInj), "A03: Injection"},
-		{string(common.AttackLDAPInjection), "A03: Injection"},
-		{string(common.AttackNoSQLInjection), "A03: Injection"},
-		{string(common.AttackHeaderInjection), "A03: Injection"},
-		{string(common.AttackTemplateInjection), "A03: Injection"},
-
-		// A04: Insecure Design
-		{string(common.AttackBusinessLogicFlaw), "A04: Insecure Design"},
-		{string(common.AttackRaceCondition), "A04: Insecure Design"},
-
-		// A05: Security Misconfiguration
-		{string(common.AttackDefaultCredentials), "A05: Security Misconfiguration"},
-		{string(common.AttackDebugMode), "A05: Security Misconfiguration"},
-		{string(common.AttackVerboseErrors), "A05: Security Misconfiguration"},
-		{string(common.AttackMissingHeaders), "A05: Security Misconfiguration"},
-		{string(common.AttackWeakCORS), "A05: Security Misconfiguration"},
-
-		// A06: Vulnerable Components
-		{string(common.AttackKnownVulnerability), "A06: Vulnerable Components"},
-		{string(common.AttackOutdatedComponent), "A06: Vulnerable Components"},
-		{string(common.AttackVersionDisclosure), "A06: Vulnerable Components"},
-
-		// A07: Authentication Failures
-		{string(common.AttackWeakAuth), "A07: Authentication Failures"},
-		{string(common.AttackSessionFixation), "A07: Authentication Failures"},
-		{string(common.AttackSessionTimeout), "A07: Authentication Failures"},
-		{string(common.AttackWeakPassword), "A07: Authentication Failures"},
-		{string(common.AttackBruteForce), "A07: Authentication Failures"},
-
-		// A08: Software and Data Integrity Failures
-		{string(common.AttackInsecureDeserialization), "A08: Software and Data Integrity Failures"},
-		{string(common.AttackCodeInjection), "A08: Software and Data Integrity Failures"},
-		{string(common.AttackSupplyChainAttack), "A08: Software and Data Integrity Failures"},
-
-		// A09: Security Logging and Monitoring Failures
-		{string(common.AttackLogInjection), "A09: Security Logging and Monitoring Failures"},
-		{string(common.AttackLogBypass), "A09: Security Logging and Monitoring Failures"},
-		{string(common.AttackAuditTrailTampering), "A09: Security Logging and Monitoring Failures"},
-
-		// A10: Server-Side Request Forgery
-		{string(common.AttackSSRF), "A10: Server-Side Request Forgery"},
-		{string(common.AttackXXE), "A10: Server-Side Request Forgery"},
-		{string(common.AttackOpenRedirect), "A10: Server-Side Request Forgery"},
-	}
-
-	var result []AllAttackTypeData
-	for _, attackType := range allAttackTypes {
-		requests := requestTypes[attackType.AttackType]
-		blocked := blockedAttackTypes[attackType.AttackType]
-		rateLimited := rateLimitedAttackTypes[attackType.AttackType]
-
-		result = append(result, AllAttackTypeData{
-			AttackType:  attackType.AttackType,
-			Category:    attackType.Category,
-			Requests:    requests,
-			Blocked:     blocked,
-			RateLimited: rateLimited,
-		})
-	}
-
-	return result
-}
+</html>
