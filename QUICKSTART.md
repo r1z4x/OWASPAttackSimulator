@@ -1,6 +1,6 @@
 # OWASPAttackSimulator Quick Start Guide
 
-## 🚀 Get Started in 5 Minutes
+## Get Started in 5 Minutes
 
 ### Prerequisites
 - Go 1.23+
@@ -19,7 +19,7 @@ make build
 ./apps/cli/simulation --help
 ```
 
-## 📋 Basic Usage
+## Basic Usage
 
 ### 1. Run a Direct Attack
 
@@ -57,7 +57,7 @@ simulation report --format html --output security_report.html
 simulation report --format json --output findings.json
 ```
 
-## 📝 Sample Scenarios
+## Sample Scenarios
 
 ### Basic Login Attack
 
@@ -89,7 +89,7 @@ steps:
     timeout: 60s
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -99,7 +99,7 @@ export SIMULATION_DB_PATH=/path/to/database.db
 export SIMULATION_LOG_LEVEL=debug
 ```
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -114,16 +114,8 @@ export SIMULATION_LOG_LEVEL=debug
    go mod download
    ```
 
-## 🔒 Security Notice
+## Security Notice
 
-⚠️ **Important**: This tool is for authorized security testing only. Always obtain proper authorization before testing any system.
+**Important**: This tool is for authorized security testing only. Always obtain proper authorization before testing any system.
 
-## 📚 Next Steps
-
-1. **Read the Documentation**: [docs/SCENARIO_DSL.md](docs/SCENARIO_DSL.md)
-2. **Explore Architecture**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-3. **Create Custom Scenarios**: Use the sample scenarios as templates
-
----
-
-**Happy Security Testing!** 🎯
+**Happy Security Testing!**

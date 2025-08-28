@@ -100,7 +100,7 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 	}
 
 	// Debug: Print parameters being used
-	fmt.Printf("🔍 Using parameters: %v\n", config.Parameters)
+	fmt.Printf("Using parameters: %v\n", config.Parameters)
 
 	// Calculate total requests - we'll calculate this properly after generating work
 	e.totalRequests = 0
@@ -118,12 +118,12 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 
 	// Debug: Print calculated total requests
 	if e.debug {
-		fmt.Printf("🔍 [DEBUG] Calculated total requests: %d\n", e.totalRequests)
+		fmt.Printf("[DEBUG] Calculated total requests: %d\n", e.totalRequests)
 	}
 
 	// Start workers
 	var wg sync.WaitGroup
-	fmt.Printf("🔧 Starting %d worker threads\n", e.workers)
+	fmt.Printf("Starting %d worker threads\n", e.workers)
 
 	// If workers is 1, use sequential processing for better delay control
 	if e.workers == 1 {
@@ -197,7 +197,7 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 	// Update total requests with actual work count if different
 	if actualWorkCount > 0 && actualWorkCount != e.totalRequests {
 		if e.debug {
-			fmt.Printf("🔍 [DEBUG] Adjusting total requests from %d to %d (actual work count)\n", e.totalRequests, actualWorkCount)
+			fmt.Printf("[DEBUG] Adjusting total requests from %d to %d (actual work count)\n", e.totalRequests, actualWorkCount)
 		}
 		e.totalRequests = actualWorkCount
 	}
@@ -296,7 +296,7 @@ func (e *Engine) generateComprehensiveAttackWork(parameters []string, workChan c
 	e.totalRequests = totalRequests
 
 	if !calculateOnly {
-		fmt.Printf("🔍 [DEBUG] Calculated total requests: %d\n", totalRequests)
+		fmt.Printf("[DEBUG] Calculated total requests: %d\n", totalRequests)
 	}
 
 	// Generate comprehensive work including all variations
@@ -461,7 +461,7 @@ func (e *Engine) generateComprehensiveAttackWork(parameters []string, workChan c
 	}
 
 	if !calculateOnly {
-		fmt.Printf("🔍 [DEBUG] Finished generating work\n")
+		fmt.Printf("[DEBUG] Finished generating work\n")
 	}
 
 	// Return actual work count
@@ -564,7 +564,7 @@ func (e *Engine) generateSpecificPayloadWork(parameters []string, payloadSet str
 
 	attackType, exists := attackTypeMap[payloadSet]
 	if !exists {
-		fmt.Printf("⚠️  Unknown payload set: %s\n", payloadSet)
+		fmt.Printf("Unknown payload set: %s\n", payloadSet)
 		return 0
 	}
 
@@ -946,7 +946,7 @@ func (e *Engine) worker(wg *sync.WaitGroup, workChan <-chan AttackWork, resultCh
 
 		// Show debug information if enabled
 		if e.debug {
-			fmt.Printf("\n🔍 [DEBUG] Testing: %s %s\n", req.Method, req.URL)
+			fmt.Printf("\n[DEBUG] Testing: %s %s\n", req.Method, req.URL)
 			fmt.Printf("   Parameter: %s\n", work.Parameter)
 			fmt.Printf("   Payload: %s\n", work.Payload)
 			fmt.Printf("   Attack Type: %s\n", work.AttackType)
@@ -966,7 +966,7 @@ func (e *Engine) worker(wg *sync.WaitGroup, workChan <-chan AttackWork, resultCh
 		resp, err := e.client.DoRequest(ctx, &req)
 		if err != nil {
 			if e.debug {
-				fmt.Printf("   ❌ [DEBUG] Request failed: %v\n", err)
+				fmt.Printf("   [DEBUG] Request failed: %v\n", err)
 			}
 			// Silent error handling
 			continue
@@ -981,7 +981,7 @@ func (e *Engine) worker(wg *sync.WaitGroup, workChan <-chan AttackWork, resultCh
 
 			// Show response debug information if enabled
 			if e.debug {
-				fmt.Printf("   📡 [DEBUG] Response: %d (Size: %d bytes)\n", resp.StatusCode, len(resp.Body))
+				fmt.Printf("   [DEBUG] Response: %d (Size: %d bytes)\n", resp.StatusCode, len(resp.Body))
 				if len(resp.Headers) > 0 {
 					fmt.Printf("   Response Headers: %v\n", resp.Headers)
 				}
@@ -1006,7 +1006,7 @@ func (e *Engine) worker(wg *sync.WaitGroup, workChan <-chan AttackWork, resultCh
 		// Apply delay between requests if specified
 		if delay > 0 {
 			if e.debug {
-				fmt.Printf("   ⏳ [DEBUG] Applying delay of %dms between requests\n", delay)
+				fmt.Printf("   [DEBUG] Applying delay of %dms between requests\n", delay)
 			}
 			time.Sleep(time.Duration(delay) * time.Millisecond)
 		}
@@ -1125,7 +1125,7 @@ func (e *Engine) sequentialWorker(wg *sync.WaitGroup, workChan <-chan AttackWork
 
 		// Show debug information if enabled
 		if e.debug {
-			fmt.Printf("\n🔍 [DEBUG] Testing: %s %s\n", req.Method, req.URL)
+			fmt.Printf("\n[DEBUG] Testing: %s %s\n", req.Method, req.URL)
 			fmt.Printf("   Parameter: %s\n", work.Parameter)
 			fmt.Printf("   Payload: %s\n", work.Payload)
 			fmt.Printf("   Attack Type: %s\n", work.AttackType)
@@ -1145,7 +1145,7 @@ func (e *Engine) sequentialWorker(wg *sync.WaitGroup, workChan <-chan AttackWork
 		resp, err := e.client.DoRequest(ctx, &req)
 		if err != nil {
 			if e.debug {
-				fmt.Printf("   ❌ [DEBUG] Request failed: %v\n", err)
+				fmt.Printf("   [DEBUG] Request failed: %v\n", err)
 			}
 			// Silent error handling
 			continue
@@ -1160,7 +1160,7 @@ func (e *Engine) sequentialWorker(wg *sync.WaitGroup, workChan <-chan AttackWork
 
 			// Show response debug information if enabled
 			if e.debug {
-				fmt.Printf("   📡 [DEBUG] Response: %d (Size: %d bytes)\n", resp.StatusCode, len(resp.Body))
+				fmt.Printf("   [DEBUG] Response: %d (Size: %d bytes)\n", resp.StatusCode, len(resp.Body))
 				if len(resp.Headers) > 0 {
 					fmt.Printf("   Response Headers: %v\n", resp.Headers)
 				}
@@ -1185,7 +1185,7 @@ func (e *Engine) sequentialWorker(wg *sync.WaitGroup, workChan <-chan AttackWork
 		// Apply delay between requests if specified (always applied in sequential mode)
 		if delay > 0 {
 			if e.debug {
-				fmt.Printf("   ⏳ [DEBUG] Applying delay of %dms between requests (sequential mode)\n", delay)
+				fmt.Printf("   [DEBUG] Applying delay of %dms between requests (sequential mode)\n", delay)
 			}
 			time.Sleep(time.Duration(delay) * time.Millisecond)
 		}
@@ -1304,7 +1304,7 @@ func (e *Engine) getOWASPCategoryForAttackType(attackType string) common.OWASPCa
 // getVariantForPayload returns the variant name for a given payload
 func (e *Engine) getVariantForPayload(attackType string, payload string) string {
 	if e.debug {
-		fmt.Printf("🔍 [DEBUG] getVariantForPayload: attackType=%s, payload=%s\n", attackType, payload)
+		fmt.Printf("[DEBUG] getVariantForPayload: attackType=%s, payload=%s\n", attackType, payload)
 	}
 
 	// Handle method variations and combination variations
@@ -1426,14 +1426,14 @@ func (e *Engine) getVariantForPayload(attackType string, payload string) string 
 	payloads := e.mutator.GetPayloadsForType(common.AttackType(attackType))
 
 	if e.debug {
-		fmt.Printf("🔍 [DEBUG] Found %d payloads for attack type %s\n", len(payloads), attackType)
+		fmt.Printf("[DEBUG] Found %d payloads for attack type %s\n", len(payloads), attackType)
 	}
 
 	// Find the payload and return its variant
 	for _, p := range payloads {
 		if p.Value == payload {
 			if e.debug {
-				fmt.Printf("🔍 [DEBUG] Found variant: %s\n", p.Variant)
+				fmt.Printf("[DEBUG] Found variant: %s\n", p.Variant)
 			}
 			return p.Variant
 		}
@@ -1441,7 +1441,7 @@ func (e *Engine) getVariantForPayload(attackType string, payload string) string 
 
 	// If not found, return a default variant name based on attack type
 	if e.debug {
-		fmt.Printf("🔍 [DEBUG] Variant not found, returning default variant\n")
+		fmt.Printf("[DEBUG] Variant not found, returning default variant\n")
 	}
 
 	// Return a meaningful default variant name

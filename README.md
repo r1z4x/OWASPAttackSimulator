@@ -47,13 +47,6 @@ simulation scenario --file configs/scenarios/login_attack.yaml
 simulation report --format html --output security_report.html
 ```
 
-## Documentation
-
-- **[Quick Start Guide](QUICKSTART.md)** - Get started in 5 minutes
-- **[Scenario DSL](docs/SCENARIO_DSL.md)** - Learn the scenario language
-- **[Architecture](docs/ARCHITECTURE.md)** - System design and components
-- **[Variation Sets](docs/VARIATION_SETS.md)** - Configure attack variations
-
 ## CLI Commands
 
 ```bash
@@ -98,9 +91,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- **Documentation**: [docs/](docs/)
 - **Issues**: [GitHub Issues](https://github.com/r1z4x/OWASPAttackSimulator/issues)
 
 ---
 
-**⚠️ Legal Notice**: This tool is for authorized security testing only. Always obtain proper authorization before testing any system. The authors are not responsible for any misuse of this software.
+**Legal Notice**: This tool is for authorized security testing only. Always obtain proper authorization before testing any system. The authors are not responsible for any misuse of this software.

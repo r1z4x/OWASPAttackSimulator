@@ -76,3 +76,13 @@ sample_*.har
 # CLI and simulation files
 cli
 simulation
+
+# Protocol buffer files
+*.pb.go
+
+# Go workspace file
+go.sum
+go.work.sum
+
+# Test report files
+test_report.*

@@ -260,7 +260,7 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                                         </span>
                                     {{else}}
                                         <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200">
-                                            <span class="text-center">✅</span>
+                                            <span class="text-center">✓</span>
                                             <span class="text-center">Passed</span>
                                         </span>
                                     {{end}}
@@ -268,12 +268,12 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                                 <td class="px-4 py-3 text-sm text-gray-900 text-center">
                                     {{if .RateLimited}}
                                         <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded hover:bg-yellow-200">
-                                            <span class="text-center">⏱️</span>
+                                            <span class="text-center">⏱</span>
                                             <span class="text-center">Limited</span>
                                         </span>
                                     {{else}}
                                         <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200">
-                                            <span class="text-center">✅</span>
+                                            <span class="text-center">✓</span>
                                             <span class="text-center">Normal</span>
                                         </span>
                                     {{end}}
@@ -283,25 +283,25 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                                         <button data-payload="{{.Payload | html}}" data-type="{{.VulnerabilityType | html}}" 
                                                 onclick="showPayloadModal(this.dataset.payload, this.dataset.type)" 
                                                 class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded hover:bg-orange-200">
-                                            <span class="text-center">🎯</span>
+                                            <span class="text-center">→</span>
                                             <span class="text-center">Payload</span>
                                         </button>
                                         <button data-evidence="{{.Evidence | html}}" data-type="{{.VulnerabilityType | html}}" 
                                                 onclick="showEvidenceModal(this.dataset.evidence, this.dataset.type)" 
                                                 class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200">
-                                            <span class="text-center">📋</span>
+                                            <span class="text-center">📄</span>
                                             <span class="text-center">Evidence</span>
                                         </button>
                                         <button data-request="{{.RequestRaw | html}}" data-type="{{.VulnerabilityType | html}}" 
                                                 onclick="showRequestModal(this.dataset.request, this.dataset.type)" 
                                                 class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200">
-                                            <span class="text-center">📤</span>
+                                            <span class="text-center">↑</span>
                                             <span class="text-center">Request</span>
                                         </button>
                                         <button data-response="{{.ResponseRaw | html}}" data-type="{{.VulnerabilityType | html}}" 
                                                 onclick="showResponseModal(this.dataset.response, this.dataset.type)" 
                                                 class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded hover:bg-purple-200">
-                                            <span class="text-center">📥</span>
+                                            <span class="text-center">↓</span>
                                             <span class="text-center">Response</span>
                                         </button>
                                     </div>

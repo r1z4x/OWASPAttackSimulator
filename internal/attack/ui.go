@@ -90,11 +90,11 @@ func (ui *UI) PrintHeader(config *AttackConfig, concurrency int) {
 		if len(config.PayloadSets) > 0 {
 			fmt.Printf("Payload Sets: %s\n", strings.Join(config.PayloadSets, ", "))
 		}
-			if len(config.VariationSet) > 0 {
-		fmt.Printf("Variation Sets: %s\n", strings.Join(config.VariationSet, ", "))
-	} else {
-		fmt.Printf("Variation Sets: all (default)\n")
-	}
+		if len(config.VariationSet) > 0 {
+			fmt.Printf("Variation Sets: %s\n", strings.Join(config.VariationSet, ", "))
+		} else {
+			fmt.Printf("Variation Sets: all (default)\n")
+		}
 		if len(config.Parameters) > 0 {
 			fmt.Printf("Parameters: %s\n", strings.Join(config.Parameters, ", "))
 		}
@@ -224,7 +224,7 @@ func (ui *UI) PrintProgress(completed, total int, currentAttack string, rateLimi
 // PrintVulnerability prints vulnerability findings with enhanced formatting
 func (ui *UI) PrintVulnerability(vuln *Vulnerability) {
 	if !ui.useColors {
-		fmt.Printf("⚠️  %s vulnerability detected in parameter %s\n", vuln.Type, vuln.Parameter)
+		fmt.Printf("VULNERABILITY: %s vulnerability detected in parameter %s\n", vuln.Type, vuln.Parameter)
 		return
 	}
 
@@ -233,7 +233,7 @@ func (ui *UI) PrintVulnerability(vuln *Vulnerability) {
 	cyan := color.New(color.FgCyan, color.Bold)
 	white := color.New(color.FgWhite)
 
-	red.Printf("⚠️  VULNERABILITY DETECTED!\n")
+	red.Printf("VULNERABILITY DETECTED!\n")
 	yellow.Printf("Type: ")
 	white.Printf("%s\n", vuln.Type)
 	yellow.Printf("Parameter: ")
@@ -323,7 +323,7 @@ func (ui *UI) PrintSummary(result *AttackResult) {
 // PrintStepInfo prints step information with enhanced formatting
 func (ui *UI) PrintStepInfo(stepIndex, totalSteps int, stepDescription, stepType string) {
 	if !ui.useColors {
-		fmt.Printf("📋 Step %d/%d: %s (%s)\n", stepIndex+1, totalSteps, stepDescription, stepType)
+		fmt.Printf("Step %d/%d: %s (%s)\n", stepIndex+1, totalSteps, stepDescription, stepType)
 		return
 	}
 
@@ -332,7 +332,7 @@ func (ui *UI) PrintStepInfo(stepIndex, totalSteps int, stepDescription, stepType
 	blue := color.New(color.FgBlue, color.Bold)
 	white := color.New(color.FgWhite)
 
-	cyan.Printf("📋 Step ")
+	cyan.Printf("Step ")
 	yellow.Printf("%d/%d", stepIndex+1, totalSteps)
 	cyan.Printf(": ")
 	white.Printf("%s", stepDescription)
@@ -391,17 +391,17 @@ func formatDuration(d time.Duration) string {
 	if d < time.Second {
 		return fmt.Sprintf("%.0fms", float64(d.Nanoseconds())/1000000.0)
 	}
-	
+
 	if d < time.Minute {
 		return fmt.Sprintf("%.1fs", d.Seconds())
 	}
-	
+
 	if d < time.Hour {
 		minutes := int(d.Minutes())
 		seconds := int(d.Seconds()) % 60
 		return fmt.Sprintf("%dm%ds", minutes, seconds)
 	}
-	
+
 	hours := int(d.Hours())
 	minutes := int(d.Minutes()) % 60
 	return fmt.Sprintf("%dh%dm", hours, minutes)
