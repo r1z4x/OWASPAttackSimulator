@@ -20,12 +20,15 @@
 - ✅ Build and deployment scripts
 
 ### 📋 **CLI Commands Implemented**
-- ✅ `session connect/status/close`
-- ✅ `run scenario/step`
-- ✅ `import har/json`
-- ✅ `export har/report`
-- ✅ `db stats/vacuum`
-- ✅ `plugin list/build/enable/disable`
+- ✅ `attack` - Direct attack execution
+- ✅ `scenario` - Scenario file execution
+- ✅ `report` - Report generation
+- ✅ `server` - gRPC server management
+- ❌ `session connect/status/close` (Not implemented)
+- ❌ `import har/json` (Not implemented)
+- ❌ `export har` (Not implemented)
+- ❌ `db stats/vacuum` (Not implemented)
+- ❌ `plugin list/build/enable/disable` (Not implemented)
 
 ### 📝 **Configuration & Documentation**
 - ✅ `configs/defaults.yaml` - Complete configuration
@@ -62,12 +65,12 @@
 - ✅ `pkg/session/` - Session management framework ready
 - ✅ `pkg/store/` - Database layer framework ready
 - ✅ `pkg/report/` - Reporting framework ready
-- ✅ `pkg/plugins/` - Plugin system framework ready
+- ❌ `pkg/plugins/` - Plugin system framework ready (Not implemented)
 
 ### 🔌 **Plugin Architecture**
-- ✅ Go plugin interface defined
-- ✅ TypeScript plugin interface defined
-- ✅ Plugin management commands implemented
+- ❌ Go plugin interface defined (Not implemented)
+- ❌ TypeScript plugin interface defined (Not implemented)
+- ❌ Plugin management commands implemented (Not implemented)
 
 ## 🎯 **NEXT STEPS** - Implementation Priority
 
@@ -87,7 +90,7 @@
 
 ### 3. **Low Priority** - Enhancements
 - [ ] Implement `pkg/crawl/` - Web crawling
-- [ ] Implement `pkg/plugins/` - Plugin system
+- [ ] Implement `pkg/plugins/` - Plugin system (Future enhancement)
 - [ ] Add monitoring and metrics
 - [ ] Add CI/CD pipelines
 - [ ] Add comprehensive tests

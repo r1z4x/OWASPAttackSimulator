@@ -47,22 +47,24 @@ OWASPAttackSimulator is a comprehensive security testing framework built with a 
 
 **Responsibilities**:
 - Command-line interface for all operations
-- Session management (connect, status, close)
-- Scenario execution (run, step)
-- Data import/export (HAR, JSON, reports)
-- Database management (vacuum, stats)
-- Plugin management (build, enable, disable)
+- Direct attack execution
+- Scenario execution
+- Report generation
+- gRPC server management
 
 **Key Commands**:
 ```bash
-simulation session connect --target <url>
-simulation run scenario --file <scenario.yaml>
-simulation export report --format md --out report.md
+simulation attack --target <url>
+simulation scenario --file <scenario.yaml>
+simulation report --format html --output report.html
+simulation server --port <port>
 ```
 
 ### 2. GUI Runner (`apps/gui-runner`)
 
 **Technology**: TypeScript + Playwright
+
+**Status**: Basic implementation exists (planned for future enhancement)
 
 **Responsibilities**:
 - Browser automation and control
@@ -76,6 +78,8 @@ simulation export report --format md --out report.md
 - Cookie and storage synchronization
 - HAR export capabilities
 - Live step execution monitoring
+
+**Note**: GUI runner is in development and not fully integrated with the main CLI workflow.
 
 ### 3. gRPC Broker (`pkg/broker`)
 
@@ -316,9 +320,9 @@ kubectl apply -f k8s/
 - gRPC service status
 - Resource utilization
 
-## Plugin Architecture
+## Plugin Architecture (Planned)
 
-### 1. Go Plugins
+### 1. Go Plugins (Future Implementation)
 
 ```go
 type Plugin interface {
@@ -328,7 +332,7 @@ type Plugin interface {
 }
 ```
 
-### 2. TypeScript Plugins
+### 2. TypeScript Plugins (Future Implementation)
 
 ```typescript
 interface Plugin {
@@ -338,12 +342,14 @@ interface Plugin {
 }
 ```
 
-### 3. Plugin Management
+### 3. Plugin Management (Future Implementation)
 
 - Dynamic loading/unloading
 - Configuration management
 - Version compatibility
 - Security sandboxing
+
+**Note**: Plugin architecture is planned for future releases but not currently implemented.
 
 ## Future Enhancements
 

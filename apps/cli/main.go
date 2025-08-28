@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/owaspattacksimulator/apps/cli/cmd"
+	"github.com/owaspattacksimulator/internal/attack"
 	"github.com/spf13/cobra"
 )
 
@@ -24,30 +25,22 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:   "simulation",
 		Short: "OWASP Security Testing Framework",
-		Long: `OWASPAttackSimulator is a scenario-based security testing framework that provides
-infinite-step attack infrastructure with GUI/CLI support, gRPC broker,
-and comprehensive OWASP vulnerability detection.
+		Long: `OWASPAttackSimulator - Comprehensive security testing framework with infinite-step attack infrastructure.
 
 Features:
-• 🚀 Enhanced CLI with colored output
-• 🎯 Multiple attack types (XSS, SQLi, SSRF, etc.)
-• 🎬 Scenario-based testing
-• 📊 Real-time progress tracking
-• 🛡️ Comprehensive vulnerability detection`,
+• 🎯 Multiple attack types (XSS, SQLi, SSRF, XXE, CSRF, CORS, AuthZ)
+• 🎬 Scenario-based testing with YAML DSL
+• 🚀 CLI and GUI support
+• 📊 Real-time monitoring and reporting`,
 		Version:           "1.0.0",
 		DisableAutoGenTag: true,
 		SilenceUsage:      true, // Don't show usage on error
 		SilenceErrors:     true, // Don't show error twice
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// If no subcommand is provided, run the server by default
-			fmt.Println("🚀 Starting gRPC server (default mode)...")
-			// Find the server command
-			for _, subCmd := range cmd.Commands() {
-				if subCmd.Name() == "server" {
-					return subCmd.RunE(subCmd, []string{})
-				}
-			}
-			return fmt.Errorf("server command not found")
+			// Show banner and help when no subcommand is provided
+			ui := attack.NewUI(true, false, false) // Enable colors, no progress, no interactive
+			ui.PrintBanner()
+			return cmd.Help()
 		},
 	}
 

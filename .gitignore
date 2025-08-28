@@ -72,3 +72,7 @@ coverage.html
 example_requests.har
 test_requests.json
 sample_*.har
+
+# CLI and simulation files
+cli
+simulation
