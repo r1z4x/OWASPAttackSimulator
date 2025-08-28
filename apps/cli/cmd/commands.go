@@ -37,6 +37,7 @@ func AddAttackCommand(rootCmd *cobra.Command) {
 			target, _ := cmd.Flags().GetString("target")
 			method, _ := cmd.Flags().GetString("method")
 			payloadSet, _ := cmd.Flags().GetString("payload-set")
+			variationSet, _ := cmd.Flags().GetStringSlice("variation-set")
 			workers, _ := cmd.Flags().GetInt("workers")
 			timeoutStr, _ := cmd.Flags().GetString("timeout")
 			generateReport, _ := cmd.Flags().GetBool("report")
@@ -63,10 +64,11 @@ func AddAttackCommand(rootCmd *cobra.Command) {
 
 			// Prepare attack configuration
 			config := &attack.AttackConfig{
-				Target:      target,
-				Method:      method,
-				PayloadSets: []string{payloadSet},
-				Headers:     make(map[string]string),
+				Target:       target,
+				Method:       method,
+				PayloadSets:  []string{payloadSet},
+				VariationSet: variationSet, // Use the variation set from CLI flag
+				Headers:      make(map[string]string),
 			}
 
 			// Run the attack
@@ -92,7 +94,7 @@ func AddAttackCommand(rootCmd *cobra.Command) {
 					IncludeEvidence: true,
 				}
 
-				err := reporter.GenerateReport(findings, config)
+				err := reporter.GenerateReport(findings, config, result.TotalRequests, result.Duration)
 				if err != nil {
 					fmt.Printf("❌ Failed to generate report: %v\n", err)
 				} else {
@@ -107,6 +109,7 @@ func AddAttackCommand(rootCmd *cobra.Command) {
 	attackCmd.Flags().String("target", "", "Target URL to attack")
 	attackCmd.Flags().String("method", "GET", "HTTP method to use")
 	attackCmd.Flags().String("payload-set", "all", "Payload set to use (default: all for comprehensive testing)")
+	attackCmd.Flags().StringSlice("variation-set", []string{}, "Variation sets to include (method, header, body, combination, encoded). Empty means all variations")
 	attackCmd.Flags().Int("workers", 3, "Number of worker threads")
 	attackCmd.Flags().String("timeout", "30s", "Attack timeout")
 	attackCmd.Flags().Bool("report", true, "Generate HTML report after attack")
@@ -252,7 +255,7 @@ func AddReportCommand(rootCmd *cobra.Command) {
 			findings := []common.Finding{summaryFinding}
 
 			if len(findings) == 0 {
-				fmt.Println("⚠️  No findings to report.")
+				fmt.Println("✅ No findings to report - scan completed successfully!")
 				return nil
 			}
 
@@ -264,7 +267,8 @@ func AddReportCommand(rootCmd *cobra.Command) {
 				IncludeEvidence: includeEvidence,
 			}
 
-			return reporter.GenerateReport(findings, config)
+			// For report command, we don't have attack result, so use default values
+			return reporter.GenerateReport(findings, config, len(findings), time.Duration(0))
 		},
 	}
 
@@ -811,7 +815,8 @@ func executeReportGeneration(action ScenarioAction, scenario *Scenario, totalReq
 		IncludeEvidence: true,
 	}
 
-	return reporter.GenerateReport(findings, config)
+	// For report command, we don't have attack result, so use default values
+	return reporter.GenerateReport(findings, config, len(findings), time.Duration(0))
 }
 
 // executeNavigateStep executes a browser:navigate step

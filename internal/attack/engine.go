@@ -28,13 +28,14 @@ type Engine struct {
 
 // AttackConfig represents attack configuration
 type AttackConfig struct {
-	Target      string
-	Method      string
-	Headers     map[string]string
-	Parameters  []string
-	PayloadSets []string
-	Delay       int                  // Delay in milliseconds between requests
-	BodyConfig  *BodyVariationConfig // Body variation configuration
+	Target       string
+	Method       string
+	Headers      map[string]string
+	Parameters   []string
+	PayloadSets  []string
+	VariationSet []string             // New field for specifying which variations to use
+	Delay        int                  // Delay in milliseconds between requests
+	BodyConfig   *BodyVariationConfig // Body variation configuration
 }
 
 // AttackResult represents the result of an attack
@@ -110,9 +111,14 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 
 	// Generate attack work first to calculate total requests
 	if len(config.PayloadSets) == 0 || (len(config.PayloadSets) == 1 && config.PayloadSets[0] == "all") {
-		e.generateComprehensiveAttackWork(config.Parameters, nil) // Pass nil to just calculate
+		e.generateComprehensiveAttackWork(config.Parameters, nil, config.VariationSet) // Pass nil to just calculate
 	} else {
-		e.generateSpecificPayloadWork(config.Parameters, config.PayloadSets[0], nil) // Pass nil to just calculate
+		e.generateSpecificPayloadWork(config.Parameters, config.PayloadSets[0], nil, config.VariationSet) // Pass nil to just calculate
+	}
+
+	// Debug: Print calculated total requests
+	if e.debug {
+		fmt.Printf("🔍 [DEBUG] Calculated total requests: %d\n", e.totalRequests)
 	}
 
 	// Start workers
@@ -181,10 +187,19 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 	}()
 
 	// Generate and send work to channel
+	actualWorkCount := 0
 	if len(config.PayloadSets) == 0 || (len(config.PayloadSets) == 1 && config.PayloadSets[0] == "all") {
-		e.generateComprehensiveAttackWork(config.Parameters, workChan)
+		actualWorkCount = e.generateComprehensiveAttackWork(config.Parameters, workChan, config.VariationSet)
 	} else {
-		e.generateSpecificPayloadWork(config.Parameters, config.PayloadSets[0], workChan)
+		actualWorkCount = e.generateSpecificPayloadWork(config.Parameters, config.PayloadSets[0], workChan, config.VariationSet)
+	}
+
+	// Update total requests with actual work count if different
+	if actualWorkCount > 0 && actualWorkCount != e.totalRequests {
+		if e.debug {
+			fmt.Printf("🔍 [DEBUG] Adjusting total requests from %d to %d (actual work count)\n", e.totalRequests, actualWorkCount)
+		}
+		e.totalRequests = actualWorkCount
 	}
 
 	close(workChan)
@@ -208,7 +223,7 @@ func (e *Engine) RunAttack(config *AttackConfig) (*AttackResult, error) {
 }
 
 // generateComprehensiveAttackWork generates work including all mutator variations
-func (e *Engine) generateComprehensiveAttackWork(parameters []string, workChan chan<- AttackWork) {
+func (e *Engine) generateComprehensiveAttackWork(parameters []string, workChan chan<- AttackWork, variationSet []string) int {
 	// If workChan is nil, just calculate total requests
 	calculateOnly := workChan == nil
 	// Get all available attack types from mutator
@@ -222,25 +237,61 @@ func (e *Engine) generateComprehensiveAttackWork(parameters []string, workChan c
 		}
 	}
 
-	// Calculate total requests including all variations
+	// Calculate total requests including selected variations
 	totalRequests := 0
 	for _, payloads := range allPayloads {
 		// Basic payloads
 		totalRequests += len(parameters) * len(payloads)
 
 		// Method variations (7 methods per payload, limited to first 3)
-		totalRequests += 3 * 7
+		if e.shouldIncludeVariation("method", variationSet) {
+			methodCount := 0
+			for i := range payloads {
+				if i >= 3 { // Limit to first 3 payloads
+					break
+				}
+				methodCount += 7 // 7 methods per payload
+			}
+			totalRequests += methodCount
+		}
 
 		// Header variations (14 common headers per payload, limited to first 3)
-		totalRequests += 3 * 14
+		if e.shouldIncludeVariation("header", variationSet) {
+			headerCount := 0
+			for i := range payloads {
+				if i >= 3 { // Limit to first 3 payloads
+					break
+				}
+				headerCount += 14 // 14 headers per payload
+			}
+			totalRequests += headerCount
+		}
 
 		// Body variations (4 body types per payload, limited to first 3)
-		totalRequests += 3 * 4
-		// Content type variations (2 variants per body type, limited to first 3 payloads)
-		totalRequests += 3 * 4 * 2
+		if e.shouldIncludeVariation("body", variationSet) {
+			bodyCount := 0
+			contentTypeCount := 0
+			for i := range payloads {
+				if i >= 3 { // Limit to first 3 payloads
+					break
+				}
+				bodyCount += 4            // 4 body types per payload
+				contentTypeCount += 4 * 2 // 2 content type variants per body type
+			}
+			totalRequests += bodyCount + contentTypeCount
+		}
 
 		// Combination variations (2 combinations per payload, limited to first 2)
-		totalRequests += 2 * 2
+		if e.shouldIncludeVariation("combination", variationSet) {
+			combinationCount := 0
+			for i := range payloads {
+				if i >= 2 { // Limit to first 2 payloads
+					break
+				}
+				combinationCount += 2 // 2 combinations per payload
+			}
+			totalRequests += combinationCount
+		}
 	}
 	e.totalRequests = totalRequests
 
@@ -276,84 +327,19 @@ func (e *Engine) generateComprehensiveAttackWork(parameters []string, workChan c
 		}
 
 		// 2. Method variations for each payload (only for first few payloads to avoid too many requests)
-		methods := []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"}
-		for i, payload := range payloads {
-			// Limit method variations to first 3 payloads per attack type
-			if i >= 3 {
-				break
-			}
-			for _, method := range methods {
-				work := AttackWork{
-					Parameter:  "method_variation",
-					Payload:    payload.Value,
-					Type:       string(payload.Type),
-					AttackType: attackType + "_method_" + strings.ToLower(method),
+		if e.shouldIncludeVariation("method", variationSet) {
+			methods := []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"}
+			for i, payload := range payloads {
+				// Limit method variations to first 3 payloads per attack type
+				if i >= 3 {
+					break
 				}
-				select {
-				case workChan <- work:
-					// Work sent successfully
-				default:
-					// Channel is full, skip this work
-				}
-			}
-		}
-
-		// 3. Header variations for each payload (only for first few payloads)
-		commonHeaders := []string{"User-Agent", "Referer", "Cookie", "Accept", "Accept-Language", "Accept-Encoding", "X-Forwarded-For", "X-Forwarded-Host", "X-Original-URL", "X-Rewrite-URL", "X-Custom-IP-Authorization", "X-Forwarded-Server", "X-HTTP-Host-Override", "Forwarded"}
-		for i, payload := range payloads {
-			// Limit header variations to first 3 payloads per attack type
-			if i >= 3 {
-				break
-			}
-			for _, header := range commonHeaders {
-				work := AttackWork{
-					Parameter:  "header_variation",
-					Payload:    payload.Value,
-					Type:       string(payload.Type),
-					AttackType: attackType + "_header_" + strings.ToLower(header),
-				}
-				select {
-				case workChan <- work:
-					// Work sent successfully
-				default:
-					// Channel is full, skip this work
-				}
-			}
-		}
-
-		// 4. Body variations for each payload (only for first few payloads)
-		bodyTypes := []string{"json", "form", "xml", "multipart"}
-		for i, payload := range payloads {
-			// Limit body variations to first 3 payloads per attack type
-			if i >= 3 {
-				break
-			}
-			for _, bodyType := range bodyTypes {
-				// Basic body variation
-				work := AttackWork{
-					Parameter:  "body_variation",
-					Payload:    payload.Value,
-					Type:       string(payload.Type),
-					AttackType: attackType + "_body_" + bodyType,
-				}
-				select {
-				case workChan <- work:
-					// Work sent successfully
-				default:
-					// Channel is full, skip this work
-				}
-
-				// Content type variants (limited to first 2 variants per body type)
-				contentTypeVariants := e.getContentTypeVariants(bodyType)
-				for j, variant := range contentTypeVariants {
-					if j >= 2 { // Limit to first 2 variants
-						break
-					}
+				for _, method := range methods {
 					work := AttackWork{
-						Parameter:  "body_variation_with_content_type",
+						Parameter:  "method_variation",
 						Payload:    payload.Value,
 						Type:       string(payload.Type),
-						AttackType: attackType + "_body_" + bodyType + "_content_type_" + strings.ReplaceAll(variant, "/", "_"),
+						AttackType: attackType + "_method_" + strings.ToLower(method),
 					}
 					select {
 					case workChan <- work:
@@ -365,38 +351,111 @@ func (e *Engine) generateComprehensiveAttackWork(parameters []string, workChan c
 			}
 		}
 
-		// 5. Combination variations (header + URL, URL + body) - only for first few payloads
-		for i, payload := range payloads {
-			// Limit combination variations to first 2 payloads per attack type
-			if i >= 2 {
-				break
+		// 3. Header variations for each payload (only for first few payloads)
+		if e.shouldIncludeVariation("header", variationSet) {
+			commonHeaders := []string{"User-Agent", "Referer", "Cookie", "Accept", "Accept-Language", "Accept-Encoding", "X-Forwarded-For", "X-Forwarded-Host", "X-Original-URL", "X-Rewrite-URL", "X-Custom-IP-Authorization", "X-Forwarded-Server", "X-HTTP-Host-Override", "Forwarded"}
+			for i, payload := range payloads {
+				// Limit header variations to first 3 payloads per attack type
+				if i >= 3 {
+					break
+				}
+				for _, header := range commonHeaders {
+					work := AttackWork{
+						Parameter:  "header_variation",
+						Payload:    payload.Value,
+						Type:       string(payload.Type),
+						AttackType: attackType + "_header_" + strings.ToLower(header),
+					}
+					select {
+					case workChan <- work:
+						// Work sent successfully
+					default:
+						// Channel is full, skip this work
+					}
+				}
 			}
-			// Header + URL combination
-			work := AttackWork{
-				Parameter:  "combination_header_url",
-				Payload:    payload.Value,
-				Type:       string(payload.Type),
-				AttackType: attackType + "_combination_header_url",
-			}
-			select {
-			case workChan <- work:
-				// Work sent successfully
-			default:
-				// Channel is full, skip this work
-			}
+		}
 
-			// URL + Body combination
-			work2 := AttackWork{
-				Parameter:  "combination_url_body",
-				Payload:    payload.Value,
-				Type:       string(payload.Type),
-				AttackType: attackType + "_combination_url_body",
+		// 4. Body variations for each payload (only for first few payloads)
+		if e.shouldIncludeVariation("body", variationSet) {
+			bodyTypes := []string{"json", "form", "xml", "multipart"}
+			for i, payload := range payloads {
+				// Limit body variations to first 3 payloads per attack type
+				if i >= 3 {
+					break
+				}
+				for _, bodyType := range bodyTypes {
+					// Basic body variation
+					work := AttackWork{
+						Parameter:  "body_variation",
+						Payload:    payload.Value,
+						Type:       string(payload.Type),
+						AttackType: attackType + "_body_" + bodyType,
+					}
+					select {
+					case workChan <- work:
+						// Work sent successfully
+					default:
+						// Channel is full, skip this work
+					}
+
+					// Content type variants (limited to first 2 variants per body type)
+					contentTypeVariants := e.getContentTypeVariants(bodyType)
+					for j, variant := range contentTypeVariants {
+						if j >= 2 { // Limit to first 2 variants
+							break
+						}
+						work := AttackWork{
+							Parameter:  "body_variation_with_content_type",
+							Payload:    payload.Value,
+							Type:       string(payload.Type),
+							AttackType: attackType + "_body_" + bodyType + "_content_type_" + strings.ReplaceAll(variant, "/", "_"),
+						}
+						select {
+						case workChan <- work:
+							// Work sent successfully
+						default:
+							// Channel is full, skip this work
+						}
+					}
+				}
 			}
-			select {
-			case workChan <- work2:
-				// Work sent successfully
-			default:
-				// Channel is full, skip this work
+		}
+
+		// 5. Combination variations (header + URL, URL + body) - only for first few payloads
+		if e.shouldIncludeVariation("combination", variationSet) {
+			for i, payload := range payloads {
+				// Limit combination variations to first 2 payloads per attack type
+				if i >= 2 {
+					break
+				}
+				// Header + URL combination
+				work := AttackWork{
+					Parameter:  "combination_header_url",
+					Payload:    payload.Value,
+					Type:       string(payload.Type),
+					AttackType: attackType + "_combination_header_url",
+				}
+				select {
+				case workChan <- work:
+					// Work sent successfully
+				default:
+					// Channel is full, skip this work
+				}
+
+				// URL + Body combination
+				work2 := AttackWork{
+					Parameter:  "combination_url_body",
+					Payload:    payload.Value,
+					Type:       string(payload.Type),
+					AttackType: attackType + "_combination_url_body",
+				}
+				select {
+				case workChan <- work2:
+					// Work sent successfully
+				default:
+					// Channel is full, skip this work
+				}
 			}
 		}
 	}
@@ -404,10 +463,64 @@ func (e *Engine) generateComprehensiveAttackWork(parameters []string, workChan c
 	if !calculateOnly {
 		fmt.Printf("🔍 [DEBUG] Finished generating work\n")
 	}
+
+	// Return actual work count
+	if calculateOnly {
+		return e.totalRequests
+	}
+
+	// Count actual work items sent to channel
+	actualWorkCount := 0
+	for _, payloads := range allPayloads {
+		// Basic payloads
+		actualWorkCount += len(parameters) * len(payloads)
+
+		// Method variations
+		if e.shouldIncludeVariation("method", variationSet) {
+			for i := range payloads {
+				if i >= 3 {
+					break
+				}
+				actualWorkCount += 7
+			}
+		}
+
+		// Header variations
+		if e.shouldIncludeVariation("header", variationSet) {
+			for i := range payloads {
+				if i >= 3 {
+					break
+				}
+				actualWorkCount += 14
+			}
+		}
+
+		// Body variations
+		if e.shouldIncludeVariation("body", variationSet) {
+			for i := range payloads {
+				if i >= 3 {
+					break
+				}
+				actualWorkCount += 4 + 8 // 4 body types + 8 content type variants
+			}
+		}
+
+		// Combination variations
+		if e.shouldIncludeVariation("combination", variationSet) {
+			for i := range payloads {
+				if i >= 2 {
+					break
+				}
+				actualWorkCount += 2
+			}
+		}
+	}
+
+	return actualWorkCount
 }
 
 // generateSpecificPayloadWork generates work for specific payload sets
-func (e *Engine) generateSpecificPayloadWork(parameters []string, payloadSet string, workChan chan<- AttackWork) {
+func (e *Engine) generateSpecificPayloadWork(parameters []string, payloadSet string, workChan chan<- AttackWork, variationSet []string) int {
 	// Map payload set names to attack types
 	attackTypeMap := map[string]string{
 		"xss.reflected":            string(common.AttackXSS),
@@ -452,7 +565,7 @@ func (e *Engine) generateSpecificPayloadWork(parameters []string, payloadSet str
 	attackType, exists := attackTypeMap[payloadSet]
 	if !exists {
 		fmt.Printf("⚠️  Unknown payload set: %s\n", payloadSet)
-		return
+		return 0
 	}
 
 	e.currentAttack = payloadSet // Set current attack type
@@ -460,27 +573,72 @@ func (e *Engine) generateSpecificPayloadWork(parameters []string, payloadSet str
 	// Get payloads for this attack type
 	payloads := e.mutator.GetPayloadsForType(common.AttackType(attackType))
 
-	// Calculate total requests for this payload set - include all variations
+	// Calculate total requests for this payload set - include selected variations
 	e.totalRequests = len(parameters) * len(payloads)
 
 	// Add method variations (limited to first 3 payloads)
-	e.totalRequests += 3 * 7
+	if e.shouldIncludeVariation("method", variationSet) {
+		methodCount := 0
+		for i := range payloads {
+			if i >= 3 { // Limit to first 3 payloads
+				break
+			}
+			methodCount += 7 // 7 methods per payload
+		}
+		e.totalRequests += methodCount
+	}
 
 	// Add header variations (limited to first 3 payloads)
-	e.totalRequests += 3 * 14
+	if e.shouldIncludeVariation("header", variationSet) {
+		headerCount := 0
+		for i := range payloads {
+			if i >= 3 { // Limit to first 3 payloads
+				break
+			}
+			headerCount += 14 // 14 headers per payload
+		}
+		e.totalRequests += headerCount
+	}
 
 	// Add body variations (limited to first 3 payloads)
-	e.totalRequests += 3 * 4
+	if e.shouldIncludeVariation("body", variationSet) {
+		bodyCount := 0
+		for i := range payloads {
+			if i >= 3 { // Limit to first 3 payloads
+				break
+			}
+			bodyCount += 4 // 4 body types per payload
+		}
+		e.totalRequests += bodyCount
+	}
 
 	// Add combination variations (limited to first 2 payloads)
-	e.totalRequests += 2 * 2
+	if e.shouldIncludeVariation("combination", variationSet) {
+		combinationCount := 0
+		for i := range payloads {
+			if i >= 2 { // Limit to first 2 payloads
+				break
+			}
+			combinationCount += 2 // 2 combinations per payload
+		}
+		e.totalRequests += combinationCount
+	}
 
 	// Add encoded variations (limited to first 2 payloads, up to 4 encodings each)
-	e.totalRequests += 2 * 4
+	if e.shouldIncludeVariation("encoded", variationSet) {
+		encodedCount := 0
+		for i := range payloads {
+			if i >= 2 { // Limit to first 2 payloads
+				break
+			}
+			encodedCount += 4 // 4 encodings per payload
+		}
+		e.totalRequests += encodedCount
+	}
 
 	// If workChan is nil, just calculate
 	if workChan == nil {
-		return
+		return e.totalRequests
 	}
 
 	// 1. Basic payload work
@@ -497,145 +655,210 @@ func (e *Engine) generateSpecificPayloadWork(parameters []string, payloadSet str
 	}
 
 	// 2. Method variations for each payload (only for first few payloads)
-	methods := []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"}
-	for i, payload := range payloads {
-		// Limit method variations to first 3 payloads per attack type
-		if i >= 3 {
-			break
-		}
-		for _, method := range methods {
-			work := AttackWork{
-				Parameter:  "method_variation",
-				Payload:    payload.Value,
-				Type:       string(payload.Type),
-				AttackType: attackType + "_method_" + strings.ToLower(method),
+	if e.shouldIncludeVariation("method", variationSet) {
+		methods := []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"}
+		for i, payload := range payloads {
+			// Limit method variations to first 3 payloads per attack type
+			if i >= 3 {
+				break
 			}
-			workChan <- work
+			for _, method := range methods {
+				work := AttackWork{
+					Parameter:  "method_variation",
+					Payload:    payload.Value,
+					Type:       string(payload.Type),
+					AttackType: attackType + "_method_" + strings.ToLower(method),
+				}
+				workChan <- work
+			}
 		}
 	}
 
 	// 3. Header variations for each payload (only for first few payloads)
-	commonHeaders := []string{"User-Agent", "Referer", "Cookie", "Accept", "Accept-Language", "Accept-Encoding", "X-Forwarded-For", "X-Forwarded-Host", "X-Original-URL", "X-Rewrite-URL", "X-Custom-IP-Authorization", "X-Forwarded-Server", "X-HTTP-Host-Override", "Forwarded"}
-	for i, payload := range payloads {
-		// Limit header variations to first 3 payloads per attack type
-		if i >= 3 {
-			break
-		}
-		for _, header := range commonHeaders {
-			work := AttackWork{
-				Parameter:  "header_variation",
-				Payload:    payload.Value,
-				Type:       string(payload.Type),
-				AttackType: attackType + "_header_" + strings.ToLower(header),
+	if e.shouldIncludeVariation("header", variationSet) {
+		commonHeaders := []string{"User-Agent", "Referer", "Cookie", "Accept", "Accept-Language", "Accept-Encoding", "X-Forwarded-For", "X-Forwarded-Host", "X-Original-URL", "X-Rewrite-URL", "X-Custom-IP-Authorization", "X-Forwarded-Server", "X-HTTP-Host-Override", "Forwarded"}
+		for i, payload := range payloads {
+			// Limit header variations to first 3 payloads per attack type
+			if i >= 3 {
+				break
 			}
-			workChan <- work
+			for _, header := range commonHeaders {
+				work := AttackWork{
+					Parameter:  "header_variation",
+					Payload:    payload.Value,
+					Type:       string(payload.Type),
+					AttackType: attackType + "_header_" + strings.ToLower(header),
+				}
+				workChan <- work
+			}
 		}
 	}
 
 	// 4. Body variations for each payload (only for first few payloads)
-	bodyTypes := []string{"json", "form", "xml", "multipart"}
-	for i, payload := range payloads {
-		// Limit body variations to first 3 payloads per attack type
-		if i >= 3 {
-			break
-		}
-		for _, bodyType := range bodyTypes {
-			work := AttackWork{
-				Parameter:  "body_variation",
-				Payload:    payload.Value,
-				Type:       string(payload.Type),
-				AttackType: attackType + "_body_" + bodyType,
+	if e.shouldIncludeVariation("body", variationSet) {
+		bodyTypes := []string{"json", "form", "xml", "multipart"}
+		for i, payload := range payloads {
+			// Limit body variations to first 3 payloads per attack type
+			if i >= 3 {
+				break
 			}
-			workChan <- work
+			for _, bodyType := range bodyTypes {
+				work := AttackWork{
+					Parameter:  "body_variation",
+					Payload:    payload.Value,
+					Type:       string(payload.Type),
+					AttackType: attackType + "_body_" + bodyType,
+				}
+				workChan <- work
+			}
 		}
 	}
 
 	// 5. Encoded variations (URL, Double URL, Hex, Unicode) - only for first few payloads
-	for i, payload := range payloads {
-		// Limit encoded variations to first 2 payloads per attack type
-		if i >= 2 {
-			break
-		}
-
-		// URL encoded variation
-		urlEncoded := url.QueryEscape(payload.Value)
-		if urlEncoded != payload.Value {
-			work := AttackWork{
-				Parameter:  "encoded_url",
-				Payload:    urlEncoded,
-				Type:       string(payload.Type),
-				AttackType: attackType + "_encoded_url",
+	if e.shouldIncludeVariation("encoded", variationSet) {
+		for i, payload := range payloads {
+			// Limit encoded variations to first 2 payloads per attack type
+			if i >= 2 {
+				break
 			}
-			workChan <- work
-		}
 
-		// Double URL encoded variation
-		doubleEncoded := url.QueryEscape(url.QueryEscape(payload.Value))
-		if doubleEncoded != payload.Value && doubleEncoded != urlEncoded {
-			work := AttackWork{
-				Parameter:  "encoded_double_url",
-				Payload:    doubleEncoded,
-				Type:       string(payload.Type),
-				AttackType: attackType + "_encoded_double_url",
+			// URL encoded variation
+			urlEncoded := url.QueryEscape(payload.Value)
+			if urlEncoded != payload.Value {
+				work := AttackWork{
+					Parameter:  "encoded_url",
+					Payload:    urlEncoded,
+					Type:       string(payload.Type),
+					AttackType: attackType + "_encoded_url",
+				}
+				workChan <- work
 			}
-			workChan <- work
-		}
 
-		// Hex encoded variation
-		hexEncoded := e.hexEncode(payload.Value)
-		if hexEncoded != payload.Value {
-			work := AttackWork{
-				Parameter:  "encoded_hex",
-				Payload:    hexEncoded,
-				Type:       string(payload.Type),
-				AttackType: attackType + "_encoded_hex",
+			// Double URL encoded variation
+			doubleEncoded := url.QueryEscape(url.QueryEscape(payload.Value))
+			if doubleEncoded != payload.Value && doubleEncoded != urlEncoded {
+				work := AttackWork{
+					Parameter:  "encoded_double_url",
+					Payload:    doubleEncoded,
+					Type:       string(payload.Type),
+					AttackType: attackType + "_encoded_double_url",
+				}
+				workChan <- work
 			}
-			workChan <- work
-		}
 
-		// Unicode encoded variation
-		unicodeEncoded := e.unicodeEncode(payload.Value)
-		if unicodeEncoded != payload.Value {
-			work := AttackWork{
-				Parameter:  "encoded_unicode",
-				Payload:    unicodeEncoded,
-				Type:       string(payload.Type),
-				AttackType: attackType + "_encoded_unicode",
+			// Hex encoded variation
+			hexEncoded := e.hexEncode(payload.Value)
+			if hexEncoded != payload.Value {
+				work := AttackWork{
+					Parameter:  "encoded_hex",
+					Payload:    hexEncoded,
+					Type:       string(payload.Type),
+					AttackType: attackType + "_encoded_hex",
+				}
+				workChan <- work
 			}
-			workChan <- work
+
+			// Unicode encoded variation
+			unicodeEncoded := e.unicodeEncode(payload.Value)
+			if unicodeEncoded != payload.Value {
+				work := AttackWork{
+					Parameter:  "encoded_unicode",
+					Payload:    unicodeEncoded,
+					Type:       string(payload.Type),
+					AttackType: attackType + "_encoded_unicode",
+				}
+				workChan <- work
+			}
 		}
 	}
 
 	// 6. Combination variations (header + URL, URL + body) - only for first few payloads
-	for i, payload := range payloads {
-		// Limit combination variations to first 2 payloads per attack type
-		if i >= 2 {
-			break
-		}
-		// Header + URL combination
-		work := AttackWork{
-			Parameter:  "combination_header_url",
-			Payload:    payload.Value,
-			Type:       string(payload.Type),
-			AttackType: attackType + "_combination_header_url",
-		}
-		workChan <- work
+	if e.shouldIncludeVariation("combination", variationSet) {
+		for i, payload := range payloads {
+			// Limit combination variations to first 2 payloads per attack type
+			if i >= 2 {
+				break
+			}
+			// Header + URL combination
+			work := AttackWork{
+				Parameter:  "combination_header_url",
+				Payload:    payload.Value,
+				Type:       string(payload.Type),
+				AttackType: attackType + "_combination_header_url",
+			}
+			workChan <- work
 
-		// URL + Body combination
-		work2 := AttackWork{
-			Parameter:  "combination_url_body",
-			Payload:    payload.Value,
-			Type:       string(payload.Type),
-			AttackType: attackType + "_combination_url_body",
+			// URL + Body combination
+			work2 := AttackWork{
+				Parameter:  "combination_url_body",
+				Payload:    payload.Value,
+				Type:       string(payload.Type),
+				AttackType: attackType + "_combination_url_body",
+			}
+			workChan <- work2
 		}
-		workChan <- work2
 	}
+
+	// Return actual work count
+	actualWorkCount := len(parameters) * len(payloads)
+
+	// Method variations
+	if e.shouldIncludeVariation("method", variationSet) {
+		for i := range payloads {
+			if i >= 3 {
+				break
+			}
+			actualWorkCount += 7
+		}
+	}
+
+	// Header variations
+	if e.shouldIncludeVariation("header", variationSet) {
+		for i := range payloads {
+			if i >= 3 {
+				break
+			}
+			actualWorkCount += 14
+		}
+	}
+
+	// Body variations
+	if e.shouldIncludeVariation("body", variationSet) {
+		for i := range payloads {
+			if i >= 3 {
+				break
+			}
+			actualWorkCount += 4
+		}
+	}
+
+	// Encoded variations
+	if e.shouldIncludeVariation("encoded", variationSet) {
+		for i := range payloads {
+			if i >= 2 {
+				break
+			}
+			actualWorkCount += 4
+		}
+	}
+
+	// Combination variations
+	if e.shouldIncludeVariation("combination", variationSet) {
+		for i := range payloads {
+			if i >= 2 {
+				break
+			}
+			actualWorkCount += 2
+		}
+	}
+
+	return actualWorkCount
 }
 
 // generateAllPayloadWork generates work for all available attack types
-func (e *Engine) generateAllPayloadWork(parameters []string, workChan chan<- AttackWork) {
+func (e *Engine) generateAllPayloadWork(parameters []string, workChan chan<- AttackWork, variationSet []string) int {
 	// Use comprehensive attack work generation
-	e.generateComprehensiveAttackWork(parameters, workChan)
+	return e.generateComprehensiveAttackWork(parameters, workChan, variationSet)
 }
 
 // worker processes attack work
@@ -1660,6 +1883,23 @@ func (e *Engine) createHeaderVariation(headerName, payload string) map[string]st
 	}
 
 	return headers
+}
+
+// shouldIncludeVariation checks if a specific variation should be included based on VariationSet
+func (e *Engine) shouldIncludeVariation(variationType string, variationSet []string) bool {
+	// If no variation set specified, include all variations (default behavior)
+	if len(variationSet) == 0 {
+		return true
+	}
+
+	// Check if the variation type is in the allowed set
+	for _, allowedVariation := range variationSet {
+		if allowedVariation == variationType {
+			return true
+		}
+	}
+
+	return false
 }
 
 // BodyVariationConfig represents configuration for body variations

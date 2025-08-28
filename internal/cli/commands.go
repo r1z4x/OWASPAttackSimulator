@@ -436,7 +436,7 @@ func (c *Commands) runReport(outputFormat string) error {
 	}
 
 	if len(findings) == 0 {
-		color.Yellow("⚠️  No findings to report.")
+		color.Green("✅ No findings to report - scan completed successfully!")
 		return nil
 	}
 
@@ -450,7 +450,7 @@ func (c *Commands) runReport(outputFormat string) error {
 		IncludeEvidence: true,
 	}
 
-	if err := reporter.GenerateReport(findings, config); err != nil {
+	if err := reporter.GenerateReport(findings, config, len(findings), time.Duration(0)); err != nil {
 		return fmt.Errorf("failed to generate report: %w", err)
 	}
 

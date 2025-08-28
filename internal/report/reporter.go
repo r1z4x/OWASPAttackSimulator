@@ -22,10 +22,10 @@ func NewReporter() *Reporter {
 }
 
 // GenerateReport generates a security report
-func (r *Reporter) GenerateReport(findings []common.Finding, config *common.ReportConfig) error {
+func (r *Reporter) GenerateReport(findings []common.Finding, config *common.ReportConfig, totalRequests int, scanDuration time.Duration) error {
 	switch config.OutputFormat {
 	case "html":
-		return r.generateHTMLReport(findings, config)
+		return r.generateHTMLReport(findings, config, totalRequests, scanDuration)
 	case "json":
 		return r.generateJSONReport(findings, config)
 	default:
@@ -34,7 +34,7 @@ func (r *Reporter) GenerateReport(findings []common.Finding, config *common.Repo
 }
 
 // generateHTMLReport generates an HTML report with Tailwind CSS and table format
-func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.ReportConfig) error {
+func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.ReportConfig, totalRequests int, scanDuration time.Duration) error {
 	file, err := os.Create(config.OutputFile)
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
@@ -121,19 +121,6 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                             <p class="text-sm font-medium text-yellow-600">Scan Duration</p>
                             <p class="text-2xl font-bold text-yellow-900">{{.ScanDuration}}</p>
                         </div>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                        </svg>
-                    </div>
-                    <div class="ml-3">
-                        <h3 class="text-sm font-medium text-blue-800">Scan Summary</h3>
-                        <p class="text-sm text-blue-700 mt-1">{{.TotalFindings}} requests were tested during the security scan. Each request and response was analyzed for security findings.</p>
                     </div>
                 </div>
             </div>
@@ -338,19 +325,34 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
                     </table>
                 </div>
                 {{else}}
-                <div class="text-center py-8 text-gray-500">
-                    <i class="fa-solid fa-circle-exclamation text-4xl text-gray-500 mb-2"></i>
-                    <h1 class="text-2xl font-bold text-gray-900 mb-2">No findings found.</h1>
+                <div class="text-center py-6">
+                    <div class="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-600 text-sm">No findings in this category - all tests passed successfully.</p>
                 </div>
                 {{end}}
             </div>
             {{end}}
         </div>
 
-
-
-
-
+        <!-- No Findings Message -->
+        {{if eq .TotalFindings 0}}
+        <div class="text-center py-12">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Security Assessment Complete</h1>
+            <p class="text-gray-600 mb-4">The comprehensive security scan has been completed. No security vulnerabilities or potential threats were identified during this assessment.</p>
+        </div>
+        {{end}}
+            </div>
+            {{end}}
+        </div>
     </div>
 
     <!-- Payload Modal -->
@@ -673,8 +675,8 @@ func (r *Reporter) generateHTMLReport(findings []common.Finding, config *common.
 	}{
 		Generated:       time.Now().Format(time.RFC3339),
 		TotalFindings:   len(findings),
-		TotalRequests:   r.calculateTotalRequests(findings),
-		ScanDuration:    r.calculateScanDuration(findings),
+		TotalRequests:   totalRequests,
+		ScanDuration:    formatDuration(scanDuration),
 		OWASPCategories: categoryGroups,
 		Findings:        r.convertToFindingData(findings),
 	}
@@ -770,6 +772,7 @@ func (r *Reporter) groupFindingsByOWASPCategory(findings []common.Finding) []OWA
 }
 
 // calculateTotalRequests calculates the total number of requests from findings
+// This function is deprecated - use the totalRequests parameter from AttackResult instead
 func (r *Reporter) calculateTotalRequests(findings []common.Finding) int {
 	// For now, we'll estimate based on findings
 	// In a real implementation, this would come from the scan engine
@@ -782,7 +785,29 @@ func (r *Reporter) calculateTotalRequests(findings []common.Finding) int {
 	return 1517
 }
 
+// formatDuration formats duration in a human-readable format
+func formatDuration(d time.Duration) string {
+	if d < time.Second {
+		return fmt.Sprintf("%.0fms", float64(d.Nanoseconds())/1000000.0)
+	}
+
+	if d < time.Minute {
+		return fmt.Sprintf("%.1fs", d.Seconds())
+	}
+
+	if d < time.Hour {
+		minutes := int(d.Minutes())
+		seconds := int(d.Seconds()) % 60
+		return fmt.Sprintf("%dm%ds", minutes, seconds)
+	}
+
+	hours := int(d.Hours())
+	minutes := int(d.Minutes()) % 60
+	return fmt.Sprintf("%dh%dm", hours, minutes)
+}
+
 // calculateScanDuration calculates the scan duration from findings
+// This function is deprecated - use the scanDuration parameter from AttackResult instead
 func (r *Reporter) calculateScanDuration(findings []common.Finding) string {
 	// For now, we'll use a default value
 	// In a real implementation, this would come from the scan engine

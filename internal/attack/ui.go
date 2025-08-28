@@ -90,6 +90,11 @@ func (ui *UI) PrintHeader(config *AttackConfig, concurrency int) {
 		if len(config.PayloadSets) > 0 {
 			fmt.Printf("Payload Sets: %s\n", strings.Join(config.PayloadSets, ", "))
 		}
+			if len(config.VariationSet) > 0 {
+		fmt.Printf("Variation Sets: %s\n", strings.Join(config.VariationSet, ", "))
+	} else {
+		fmt.Printf("Variation Sets: all (default)\n")
+	}
 		if len(config.Parameters) > 0 {
 			fmt.Printf("Parameters: %s\n", strings.Join(config.Parameters, ", "))
 		}
@@ -127,6 +132,10 @@ func (ui *UI) PrintHeader(config *AttackConfig, concurrency int) {
 	if len(config.PayloadSets) > 0 {
 		yellow.Printf("Payload Sets: ")
 		green.Printf("%s\n", strings.Join(config.PayloadSets, ", "))
+	}
+	if len(config.VariationSet) > 0 {
+		yellow.Printf("Variation Sets: ")
+		green.Printf("%s\n", strings.Join(config.VariationSet, ", "))
 	}
 
 	if len(config.Parameters) > 0 {
@@ -252,7 +261,7 @@ func (ui *UI) PrintSummary(result *AttackResult) {
 		fmt.Println()
 		fmt.Printf("[-] Target: %s\n", ui.truncateString(result.Target, 70))
 		fmt.Printf("[-] Requests: %d | Duration: %s | Speed: %.1f req/s\n",
-			result.TotalRequests, result.Duration.Round(time.Millisecond),
+			result.TotalRequests, formatDuration(result.Duration),
 			float64(result.TotalRequests)/result.Duration.Seconds())
 		if len(result.Vulnerabilities) > 0 {
 			fmt.Printf("[-] Vulnerabilities Found: %d\n", len(result.Vulnerabilities))
@@ -281,7 +290,7 @@ func (ui *UI) PrintSummary(result *AttackResult) {
 	yellow.Printf("[i] Requests: ")
 	green.Printf("%d", result.TotalRequests)
 	yellow.Printf(" | Duration: ")
-	green.Printf("%s", result.Duration.Round(time.Millisecond))
+	green.Printf("%s", formatDuration(result.Duration))
 	yellow.Printf(" | Speed: ")
 	green.Printf("%.1f req/s\n", float64(result.TotalRequests)/result.Duration.Seconds())
 
@@ -377,6 +386,27 @@ func (ui *UI) PrintInfo(message string) {
 }
 
 // Helper methods
+// formatDuration formats duration in a human-readable format
+func formatDuration(d time.Duration) string {
+	if d < time.Second {
+		return fmt.Sprintf("%.0fms", float64(d.Nanoseconds())/1000000.0)
+	}
+	
+	if d < time.Minute {
+		return fmt.Sprintf("%.1fs", d.Seconds())
+	}
+	
+	if d < time.Hour {
+		minutes := int(d.Minutes())
+		seconds := int(d.Seconds()) % 60
+		return fmt.Sprintf("%dm%ds", minutes, seconds)
+	}
+	
+	hours := int(d.Hours())
+	minutes := int(d.Minutes()) % 60
+	return fmt.Sprintf("%dh%dm", hours, minutes)
+}
+
 func (ui *UI) truncateString(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
